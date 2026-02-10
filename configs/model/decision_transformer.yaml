@@ -1,0 +1,72 @@
+# Decision Transformer Configuration
+# End-to-end decision making from world model features
+
+model:
+  name: "decision_transformer"
+  
+  # Context aggregator
+  context:
+    world_model_dim: 512
+    state_dim: 6  # velocity, angular_vel, pitch, roll, x, y
+    goal_dim: 2  # relative goal direction
+    action_history_len: 10
+    
+  # Action tokenizer
+  action_tokenizer:
+    vocab_size: 18  # Total discrete actions
+    embedding_dim: 128
+    
+  # Transformer architecture
+  transformer:
+    hidden_dim: 384
+    num_layers: 4
+    num_heads: 6
+    mlp_ratio: 4.0
+    dropout: 0.1
+    context_length: 64  # Max sequence length
+    
+  # Output heads
+  heads:
+    action:
+      type: "discrete"
+      num_actions: 18
+      
+    confidence:
+      enabled: true
+      
+    auxiliary:
+      # Auxiliary prediction for better representations
+      predict_traversability: true
+      predict_collision: true
+
+# Action vocabulary
+actions:
+  steering:
+    0: "straight"
+    1: "left_5deg"
+    2: "right_5deg"
+    3: "left_10deg"
+    4: "right_10deg"
+    5: "left_20deg"
+    6: "right_20deg"
+    7: "left_30deg"
+    8: "right_30deg"
+    9: "left_45deg"
+    10: "right_45deg"
+    
+  speed:
+    11: "maintain_speed"
+    12: "slow_down"
+    13: "speed_up"
+    14: "stop"
+    
+  reverse:
+    15: "reverse_straight"
+    16: "reverse_left"
+    17: "reverse_right"
+
+# Safety constraints
+safety:
+  min_confidence: 0.7  # Fallback threshold
+  forbidden_actions_at_low_speed: [15, 16, 17]  # No reverse at low speed
+  max_consecutive_turns: 5

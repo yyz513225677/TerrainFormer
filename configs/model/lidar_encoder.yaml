@@ -1,0 +1,114 @@
+# LiDAR Encoder Configuration
+# Supports PointPillars (fast) or PointNet++ (accurate)
+
+model:
+  name: "lidar_encoder"
+
+  # Encoder type: 'pointpillars' (fast, ~5ms) or 'pointnet2' (slower, ~25ms)
+  encoder_type: "pointpillars"
+
+  # PointPillars configuration (used when encoder_type='pointpillars')
+  pointpillars:
+    pillar_channels: 64
+    max_pillars: 12000
+    max_points_per_pillar: 32
+
+  # PointNet++ backbone (used when encoder_type='pointnet2')
+  pointnet2:
+    # Set Abstraction layers
+    sa_layers:
+      - npoint: 16384  # Number of centroids
+        radius: 0.5    # Ball query radius
+        nsample: 32    # Samples per ball
+        mlp: [32, 32, 64]
+        
+      - npoint: 4096
+        radius: 1.0
+        nsample: 32
+        mlp: [64, 64, 128]
+        
+      - npoint: 1024
+        radius: 2.0
+        nsample: 32
+        mlp: [128, 128, 256]
+        
+      - npoint: 256
+        radius: 4.0
+        nsample: 32
+        mlp: [256, 256, 512]
+    
+    # Feature Propagation layers
+    fp_layers:
+      - mlp: [256, 256]
+      - mlp: [256, 128]
+      - mlp: [128, 128, 128]
+      - mlp: [128, 128, 128]
+    
+    # Global feature
+    global_dim: 1024
+    
+  # Voxel encoder (alternative path)
+  voxel:
+    enabled: true
+    voxel_size: [0.2, 0.2, 0.2]  # meters
+    max_voxels: 40000
+    max_points_per_voxel: 32
+    
+  # BEV projection
+  bev:
+    height: 256
+    width: 256
+    channels: 64
+    x_range: [-50, 50]
+    y_range: [-50, 50]
+    z_range: [-3, 5]
+    
+    # 2D convolution after projection
+    conv_layers:
+      - out_channels: 128
+        kernel_size: 3
+        stride: 1
+        padding: 1
+        
+      - out_channels: 128
+        kernel_size: 3
+        stride: 1
+        padding: 1
+
+# Input preprocessing
+preprocessing:
+  # Range filtering
+  max_range: 70.0
+  min_range: 0.5
+  
+  # Ground segmentation
+  ground_segmentation:
+    enabled: true
+    method: "ransac"
+    distance_threshold: 0.2
+    
+  # Normalization
+  normalize_intensity: true
+  intensity_range: [0, 255]
+  
+  # Augmentation (training only)
+  augmentation:
+    random_rotation:
+      enabled: true
+      range: [-0.78, 0.78]  # +/- 45 degrees
+      
+    random_flip:
+      enabled: true
+      prob: 0.5
+      
+    random_scale:
+      enabled: true
+      range: [0.95, 1.05]
+      
+    random_dropout:
+      enabled: true
+      prob: 0.1
+      
+    random_noise:
+      enabled: true
+      std: 0.02

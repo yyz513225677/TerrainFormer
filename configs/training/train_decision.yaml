@@ -1,0 +1,122 @@
+# Phase 2: Decision Transformer Training
+# Behavioral cloning with frozen world model encoder
+
+experiment:
+  name: "decision_transformer_train"
+  seed: 42
+  output_dir: "outputs/decision_train"
+  
+# Model configuration
+model:
+  config: "configs/model/decision_transformer.yaml"
+  world_model_config: "configs/model/world_model.yaml"
+  encoder_config: "configs/model/lidar_encoder.yaml"
+  
+  # Load pretrained world model
+  pretrained:
+    world_model: "outputs/world_model_pretrain/best_model.pt"
+    freeze_encoder: true  # Freeze world model encoder
+    freeze_world_model: true  # Freeze entire world model
+    
+# Training settings
+training:
+  epochs: 50
+  batch_size: 32
+  gradient_accumulation: 1
+  
+  # Optimizer
+  optimizer:
+    type: "adamw"
+    lr: 3e-4
+    weight_decay: 0.05
+    betas: [0.9, 0.95]
+    
+  # Learning rate schedule
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 3
+    min_lr: 1e-6
+    
+  # Gradient clipping
+  max_grad_norm: 1.0
+  
+  # Mixed precision
+  fp16: true
+  
+# Loss configuration
+loss:
+  # Action prediction (main loss)
+  action:
+    weight: 1.0
+    type: "focal"  # Focal loss for class imbalance
+    gamma: 2.0     # Focusing parameter: higher = more focus on hard examples
+    label_smoothing: 0.1
+    class_weights: null  # Auto-compute or specify per-class weights
+    
+  # Auxiliary losses
+  auxiliary:
+    # Predict traversability from decision features
+    traversability:
+      weight: 0.2
+      type: "bce"
+      
+    # Collision prediction
+    collision:
+      weight: 0.3
+      type: "bce"
+      
+# Data configuration
+data:
+  config: "configs/data/dataset_config.yaml"
+  
+  train:
+    datasets: ["rellis3d"]
+    split: "train"
+
+  val:
+    datasets: ["rellis3d"]
+    split: "val"
+    
+  # RELLIS-3D sequence selection: use all sequences for decision training
+  rellis3d_sequences: [0, 1, 2, 3, 4]
+
+  # Sampling strategy
+  sampling:
+    # Oversample difficult scenarios
+    oversample_recovery: true
+    recovery_weight: 2.0
+    
+    # Balance action distribution
+    action_balancing: true
+    
+  # Frame stride: use every Nth frame to reduce sequential redundancy (training only)
+  # Set to 1 to use all frames; augmentation handles overfitting
+  frame_stride: 1
+
+  num_workers: 8
+  pin_memory: true
+  
+# Logging
+logging:
+  log_every: 50
+  val_every: 1
+  save_every: 5
+  
+  wandb:
+    enabled: true
+    project: "terrainformer"
+    
+  tensorboard:
+    enabled: true
+    
+# Checkpointing
+checkpoint:
+  save_best: true
+  metric: "val/action_accuracy"
+  mode: "max"
+  keep_last: 3
+  
+# Evaluation during training
+evaluation:
+  compute_confusion_matrix: true
+  per_action_metrics: true

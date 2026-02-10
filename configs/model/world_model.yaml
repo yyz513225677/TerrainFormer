@@ -1,0 +1,54 @@
+# World Model Configuration
+# Transformer-based terrain dynamics predictor
+
+model:
+  name: "world_model"
+  
+  # Terrain tokenizer
+  tokenizer:
+    bev_resolution: [256, 256]  # H x W
+    patch_size: 16
+    num_patches: 256  # (256/16)^2
+    
+  # Transformer encoder
+  transformer:
+    hidden_dim: 512
+    num_layers: 6
+    num_heads: 8
+    mlp_ratio: 4.0
+    dropout: 0.1
+    attention_dropout: 0.1
+    
+  # Latent state
+  latent:
+    dim: 512
+    num_tokens: 256
+    
+  # Prediction heads
+  heads:
+    future_prediction:
+      enabled: true
+      horizon: 5  # Predict 5 future frames
+      
+    traversability:
+      enabled: true
+      num_classes: 1  # Binary traversability score
+      
+    elevation:
+      enabled: true
+      
+    semantics:
+      enabled: true
+      num_classes: 20  # RELLIS-3D classes
+
+# Input specifications
+input:
+  point_cloud:
+    max_points: 65536
+    features: 4  # x, y, z, intensity
+    
+  bev:
+    x_range: [-50, 50]  # meters
+    y_range: [-50, 50]
+    z_range: [-3, 5]
+    resolution: 0.39  # meters per pixel

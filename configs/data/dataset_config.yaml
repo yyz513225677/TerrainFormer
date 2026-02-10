@@ -1,0 +1,320 @@
+# Dataset Configuration
+# Unified data format for all datasets
+
+# Data format specification
+format:
+  # LiDAR data
+  point_cloud:
+    shape: [-1, 4]  # N x (x, y, z, intensity)
+    dtype: float32
+    
+  point_cloud_history:
+    shape: [-1, -1, 4]  # T x N x 4
+    history_length: 5
+    
+  # World model targets
+  future_point_clouds:
+    shape: [-1, -1, 4]  # K x N x 4
+    prediction_horizon: 5
+    
+  terrain_labels:
+    shape: [256, 256]
+    dtype: int64
+    num_classes: 20
+    
+  traversability_map:
+    shape: [256, 256]
+    dtype: float32
+    range: [0, 1]
+    
+  elevation_map:
+    shape: [256, 256]
+    dtype: float32
+    
+  # Decision targets
+  expert_action:
+    dtype: int64
+    num_actions: 18
+    
+  action_sequence:
+    shape: [10]  # Past 10 actions
+    dtype: int64
+    
+  vehicle_state:
+    shape: [6]  # velocity_x, velocity_y, angular_vel, pitch, roll, yaw
+    dtype: float32
+    
+  goal_direction:
+    shape: [2]  # Relative x, y
+    dtype: float32
+    
+  # Metadata
+  timestamp:
+    dtype: float64
+    
+  gps:
+    shape: [3]  # lat, lon, alt
+    dtype: float64
+
+# Dataset-specific configurations
+datasets:
+  rellis3d:
+    name: "RELLIS-3D"
+    path: "../RELLIS/bin/"
+    
+    # Dataset info
+    total_sequences: 5
+    total_frames: ~13000
+    terrain_types: ["grass", "mud", "puddle", "dirt", "forest"]
+    
+    # LiDAR specs
+    lidar:
+      type: "Ouster OS1-64"
+      channels: 64
+      range: 120  # meters
+      frequency: 10  # Hz
+      
+    # Splits: RELLIS-3D used only for Decision training (Phase 2)
+    # World Model (Phase 1) uses LidarDustX + GOOSE-3D only (no overlap)
+    # 70/15/15 temporal split within each sequence
+    splits:
+      train: [0, 1, 2, 3]
+      val: [4]
+      test: [4]
+      
+    # Label mapping
+    label_map:
+      0: "void"
+      1: "grass"
+      3: "tree"
+      4: "pole"
+      5: "water"
+      6: "sky"
+      7: "vehicle"
+      8: "object"
+      9: "asphalt"
+      10: "building"
+      12: "log"
+      15: "person"
+      17: "fence"
+      18: "bush"
+      19: "concrete"
+      23: "barrier"
+      27: "puddle"
+      31: "mud"
+      33: "rubble"
+      34: "gravel"
+      
+  tartandrive:
+    name: "TartanDrive"
+    path: "data/tartandrive"
+    
+    # Dataset info
+    total_hours: 30
+    terrain_types: ["forest", "field", "desert", "snow"]
+    
+    # LiDAR specs
+    lidar:
+      type: "Velodyne VLP-16"
+      channels: 16
+      range: 100
+      frequency: 10
+      
+    # Splits
+    splits:
+      train: 0.8
+      val: 0.1
+      test: 0.1
+      
+    # Features
+    has_imu: true
+    has_gps: true
+    has_wheel_odometry: true
+    
+  lidardustx:
+    name: "LidarDustX"
+    path: "../LidarDustX/"
+
+    # Dataset info
+    total_sensors: 6
+    total_sequences: 174
+    total_frames: 7562
+    terrain_types: ["dusty", "construction", "off-road"]
+
+    # Sensors (null = all 6 sensors)
+    sensors: null
+
+    # Splits (per-sequence temporal split)
+    splits:
+      train: 0.70
+      val: 0.15
+      test: 0.15
+
+    # Temporal settings
+    max_temporal_gap: 3.0  # seconds
+
+    # Available annotations
+    has_semantic_labels: true
+    has_bounding_boxes: true
+    has_poses: false
+
+    # Phase restriction: World Model pretraining only (no poses for decision training)
+    phases: ["world_model_pretrain"]
+
+    # Semantic classes
+    classes:
+      - Car
+      - Dust
+      - Engineering
+      - Mound
+      - Obstacle
+      - Pedestrian
+      - Stone
+      - Trailer
+      - Truck
+
+  goose3d:
+    name: "GOOSE-3D"
+    path: "../goose_3d_train/"
+
+    # Dataset info
+    total_scenes: 23
+    total_frames: 7719
+    terrain_types: ["forest", "field", "urban", "campus", "rural", "snow", "rain"]
+
+    # LiDAR specs
+    lidar:
+      type: "Velodyne VLS128"
+      channels: 128
+      range: 245  # meters
+      frequency: 10  # Hz
+
+    # Splits (per-scene temporal split)
+    splits:
+      train: 0.70
+      val: 0.15
+      test: 0.15
+
+    # Temporal settings
+    max_temporal_gap: 15.0  # seconds (frames are sparser than LidarDustX)
+
+    # Available annotations
+    has_semantic_labels: true
+    has_poses: false
+
+    # Phase restriction: World Model pretraining only (no poses for decision training)
+    phases: ["world_model_pretrain"]
+
+    # Semantic classes (64 classes, label_key 0-63)
+    num_classes: 64
+    label_format: "uint32"  # semantic_class = label & 0xFF, instance_id = label >> 8
+
+  custom:
+    name: "Custom Dataset"
+    path: "data/custom"
+
+    # Placeholder for user's custom data
+    # Follow the format specification above
+
+# Data loading settings
+loading:
+  # Sequence settings
+  sequence_length: 20  # Frames per sequence
+  stride: 5  # Stride between sequences
+  
+  # Temporal settings
+  history_frames: 5
+  future_frames: 5
+  frame_skip: 1
+  
+  # Spatial settings
+  point_cloud:
+    max_points: 65536
+    min_points: 1000
+    
+  bev:
+    x_range: [-50, 50]
+    y_range: [-50, 50]
+    z_range: [-3, 5]
+    resolution: 0.39
+    
+# Preprocessing pipeline
+preprocessing:
+  # Point cloud filtering
+  range_filter:
+    min_range: 0.5
+    max_range: 70.0
+    
+  # Ground removal
+  ground_segmentation:
+    enabled: true
+    method: "ransac"
+    params:
+      distance_threshold: 0.2
+      max_iterations: 1000
+      
+  # Voxel downsampling
+  voxel_downsample:
+    enabled: true
+    voxel_size: 0.1
+    
+  # Normalization
+  normalize:
+    position: true
+    center_method: "ego"  # Center on ego vehicle
+    intensity: true
+    intensity_range: [0, 1]
+    
+# Augmentation (training only)
+augmentation:
+  # Geometric augmentations
+  random_rotation:
+    enabled: true
+    range: [-45, 45]  # degrees
+    axis: "z"
+    
+  random_flip:
+    enabled: true
+    axes: ["x"]
+    prob: 0.5
+    
+  random_scale:
+    enabled: true
+    range: [0.95, 1.05]
+    
+  random_translation:
+    enabled: true
+    range: [-0.5, 0.5]
+    
+  # Point augmentations
+  random_dropout:
+    enabled: true
+    prob: 0.1
+    max_dropout: 0.2
+    
+  random_noise:
+    enabled: true
+    std: 0.02
+    
+  # Intensity augmentations
+  intensity_jitter:
+    enabled: true
+    range: [-0.1, 0.1]
+    
+# Action label generation
+action_labeling:
+  # Steering thresholds (degrees)
+  steering:
+    straight: 2.5
+    slight: 7.5
+    moderate: 15
+    standard: 25
+    sharp: 35
+    very_sharp: 45
+    
+  # Speed thresholds (m/s)
+  speed:
+    stop: 0.5
+    slow: 2.0
+    normal: 5.0
+    fast: 10.0

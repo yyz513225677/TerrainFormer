@@ -1,0 +1,107 @@
+# Phase 1: World Model Pretraining
+# Self-supervised learning of terrain dynamics
+
+experiment:
+  name: "world_model_pretrain"
+  seed: 42
+  output_dir: "outputs/world_model_pretrain"
+  
+# Model configuration
+model:
+  config: "configs/model/world_model.yaml"
+  encoder_config: "configs/model/lidar_encoder.yaml"
+  
+# Training settings
+training:
+  epochs: 100
+  batch_size: 16
+  gradient_accumulation: 2
+  
+  # Optimizer
+  optimizer:
+    type: "adamw"
+    lr: 1e-4
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+    
+  # Learning rate schedule
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 5
+    min_lr: 1e-6
+    
+  # Gradient clipping
+  max_grad_norm: 1.0
+  
+  # Mixed precision
+  fp16: true
+  
+# Loss configuration
+loss:
+  # Future point cloud reconstruction
+  reconstruction:
+    weight: 1.0
+    type: "chamfer"  # Chamfer distance
+    
+  # Traversability prediction
+  traversability:
+    weight: 0.5
+    type: "bce"  # Binary cross entropy
+    
+  # Elevation prediction
+  elevation:
+    weight: 0.3
+    type: "mse"
+    
+  # Semantic segmentation
+  semantics:
+    weight: 0.5
+    type: "cross_entropy"
+    class_weights: null  # Will be computed from dataset
+    
+  # Contrastive loss for representation learning
+  contrastive:
+    weight: 0.2
+    temperature: 0.07
+    
+# Data configuration
+data:
+  config: "configs/data/dataset_config.yaml"
+  
+  train:
+    datasets: ["lidardustx", "goose3d"]
+    split: "train"
+
+  val:
+    datasets: ["lidardustx", "goose3d"]
+    split: "val"
+
+  # Frame stride: use every Nth frame to reduce sequential redundancy (training only)
+  # Set to 1 to use all frames; augmentation handles overfitting
+  frame_stride: 1
+
+  # Data loading
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 2
+  
+# Logging
+logging:
+  log_every: 100
+  val_every: 1  # Validate every epoch
+  save_every: 5  # Save checkpoint every 5 epochs
+  
+  wandb:
+    enabled: true
+    project: "terrainformer"
+    entity: null
+    
+  tensorboard:
+    enabled: true
+    
+# Checkpointing
+checkpoint:
+  save_best: true
+  metric: "val/total_loss"
+  mode: "min"
+  keep_last: 3

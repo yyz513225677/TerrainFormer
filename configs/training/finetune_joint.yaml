@@ -1,0 +1,133 @@
+# Phase 3: Joint Fine-tuning
+# End-to-end optimization with all parameters unfrozen
+
+experiment:
+  name: "terrainformer_joint_finetune"
+  seed: 42
+  output_dir: "outputs/joint_finetune"
+  
+# Model configuration
+model:
+  config: "configs/model/decision_transformer.yaml"
+  world_model_config: "configs/model/world_model.yaml"
+  encoder_config: "configs/model/lidar_encoder.yaml"
+  
+  # Load pretrained components
+  pretrained:
+    decision_transformer: "outputs/decision_train/best_model.pt"
+    freeze_encoder: false  # Unfreeze all
+    freeze_world_model: false
+    
+# Training settings
+training:
+  epochs: 30
+  batch_size: 16
+  gradient_accumulation: 2
+  
+  # Optimizer with layer-wise learning rates
+  optimizer:
+    type: "adamw"
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+    
+    # Layer-wise learning rates
+    lr_config:
+      encoder: 1e-5      # Lowest LR for encoder
+      world_model: 3e-5  # Medium LR for world model
+      decision: 1e-4     # Highest LR for decision
+      
+  # Learning rate schedule
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 2
+    min_lr: 1e-7
+    
+  # Gradient clipping
+  max_grad_norm: 0.5
+  
+  # Mixed precision
+  fp16: true
+  
+# Loss configuration
+loss:
+  # World model losses (reduced weight)
+  world_model:
+    reconstruction:
+      weight: 0.3
+      
+    traversability:
+      weight: 0.2
+      
+  # Decision losses (main focus)
+  decision:
+    action:
+      weight: 1.0
+      type: "cross_entropy"
+      label_smoothing: 0.05
+      
+    confidence:
+      weight: 0.1
+      type: "calibration"  # Calibration loss for confidence
+      
+  # Consistency loss between world model and decision
+  consistency:
+    weight: 0.2
+    type: "kl_divergence"
+    
+# Data configuration
+data:
+  config: "configs/data/dataset_config.yaml"
+  
+  train:
+    datasets: ["rellis3d", "tartandrive", "custom"]
+    split: "train"
+    
+  val:
+    datasets: ["rellis3d", "tartandrive"]
+    split: "val"
+    
+  test:
+    datasets: ["rellis3d", "tartandrive"]
+    split: "test"
+    
+  # RELLIS-3D sequence selection: use all sequences for decision training
+  rellis3d_sequences: [0, 1, 2, 3, 4]
+
+  num_workers: 8
+  pin_memory: true
+
+# Logging
+logging:
+  log_every: 50
+  val_every: 1
+  save_every: 2
+  
+  wandb:
+    enabled: true
+    project: "terrainformer"
+    
+  tensorboard:
+    enabled: true
+    
+# Checkpointing
+checkpoint:
+  save_best: true
+  metric: "val/combined_score"  # Weighted combination
+  mode: "max"
+  keep_last: 5
+  
+# Final evaluation
+evaluation:
+  run_test: true  # Run on test set at end
+  
+  metrics:
+    - action_accuracy
+    - top3_accuracy
+    - per_class_accuracy
+    - confidence_calibration
+    - trajectory_smoothness
+    
+  visualization:
+    save_predictions: true
+    save_attention_maps: true
+    num_samples: 100
