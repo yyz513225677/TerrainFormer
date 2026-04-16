@@ -1,0 +1,70 @@
+# LiDAR Encoder Configuration
+# PointPillars-based BEV projection for real-time inference (~5ms, 0.15M params)
+
+model:
+  name: "lidar_encoder"
+
+  # PointPillars configuration
+  pointpillars:
+    pillar_channels: 64
+    max_pillars: 12000
+    max_points_per_pillar: 32
+
+  # BEV projection output
+  bev:
+    height: 256
+    width: 256
+    channels: 64
+    x_range: [-50, 50]
+    y_range: [-50, 50]
+    z_range: [-3, 5]
+
+    # 2D convolution after projection
+    conv_layers:
+      - out_channels: 128
+        kernel_size: 3
+        stride: 1
+        padding: 1
+
+      - out_channels: 128
+        kernel_size: 3
+        stride: 1
+        padding: 1
+
+# Input preprocessing
+preprocessing:
+  # Range filtering
+  max_range: 70.0
+  min_range: 0.5
+
+  # Ground segmentation
+  ground_segmentation:
+    enabled: true
+    method: "ransac"
+    distance_threshold: 0.2
+
+  # Normalization
+  normalize_intensity: true
+  intensity_range: [0, 255]
+
+  # Augmentation (training only)
+  augmentation:
+    random_rotation:
+      enabled: true
+      range: [-0.78, 0.78]  # +/- 45 degrees
+
+    random_flip:
+      enabled: true
+      prob: 0.5
+
+    random_scale:
+      enabled: true
+      range: [0.95, 1.05]
+
+    random_dropout:
+      enabled: true
+      prob: 0.1
+
+    random_noise:
+      enabled: true
+      std: 0.02
