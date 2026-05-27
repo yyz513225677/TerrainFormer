@@ -1,0 +1,79 @@
+% World Model block diagram for TerrainFormer paper.
+% Compile: pdflatex world_model_diagram.tex
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath,amssymb}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,shapes.geometric,decorations.pathreplacing}
+
+\begin{document}
+\tikzset{
+    block/.style    ={draw, rounded corners=2pt, minimum height=9mm, minimum width=32mm, align=center, font=\small, fill=white},
+    input/.style    ={block, fill=blue!8,   draw=blue!60},
+    proc/.style     ={block, fill=orange!12, draw=orange!70},
+    latent/.style   ={block, fill=green!10, draw=green!60!black, minimum width=24mm},
+    head/.style     ={block, fill=red!8,    draw=red!60,         minimum width=28mm, minimum height=8mm},
+    flow/.style     ={-Latex, thick, rounded corners=3pt},
+    annot/.style    ={font=\scriptsize\itshape, text=gray!55!black, align=left},
+    dimlabel/.style    ={font=\scriptsize\ttfamily, text=gray!40!black},
+    boundary/.style ={draw=gray!50, rounded corners=4pt, dashed, inner sep=5pt},
+}
+
+\begin{tikzpicture}[node distance=7mm, every node/.style={font=\small}]
+
+% Stage 1: Tokenizer
+\node[input] (bev) {BEV feature map};
+\node[dimlabel, below=-1mm of bev] {$(B,64,256,256)$};
+
+\node[proc, right=of bev] (patch) {Patch embedding\\$16{\times}16 \to d{=}512$};
+\node[dimlabel, below=-1mm of patch] {$(B,256,512)$};
+
+\node[proc, right=of patch] (clspos) {Add \texttt{[CLS]} token\\+ positional emb};
+\node[dimlabel, below=-1mm of clspos] {$(B,257,512)$};
+
+% Stage 2: Dynamics Transformer
+\node[proc, below=18mm of clspos] (dyn) {6-layer Transformer\\$h{=}8$, $d_k{=}64$, MLP$\times$4};
+\node[dimlabel, below=-1mm of dyn] {$(B,257,512)$};
+
+% Stage 3: Latent compression
+\node[latent, left=of dyn] (queries) {64 learnable\\latent queries};
+\node[dimlabel, below=-1mm of queries] {$(B,64,512)$};
+
+\node[proc, left=of queries] (cross) {Cross-attention\\queries $\leftarrow$ tokens};
+\node[dimlabel, below=-1mm of cross] {$(B,64,512)$};
+
+\node[latent, left=of cross] (latent) {$\mathbf{Z}$ + $\mathbf{z}_\text{global}$\\(mean-pool)};
+\node[dimlabel, below=-1mm of latent] {$(B,64,512)$, $(B,512)$};
+
+% Stage 4: Four heads
+\node[head, below=14mm of latent, xshift=15mm] (h1) {Future reconstruction\\$\mathbb{R}^{5\times 64\times 16\times 16}$};
+\node[head, right=of h1] (h2) {Traversability\\$\mathbb{R}^{1\times 256\times 256}$};
+\node[head, right=of h2] (h3) {Elevation\\$\mathbb{R}^{1\times 256\times 256}$};
+\node[head, right=of h3] (h4) {Semantics\\$\mathbb{R}^{20\times 256\times 256}$};
+
+% Flows
+\draw[flow] (bev) -- (patch);
+\draw[flow] (patch) -- (clspos);
+\draw[flow] (clspos) -- (dyn);
+\draw[flow] (dyn) -- (queries);
+\draw[flow] (queries) -- (cross);
+\draw[flow] (cross) -- (latent);
+\draw[flow] (latent) |- (h1.west);
+\draw[flow] (latent) |- (h2.west);
+\draw[flow] (latent) |- (h3.west);
+\draw[flow] (latent) |- (h4.west);
+
+% Stage brackets
+\node[boundary, fit=(bev)(clspos), label={above:\bfseries Terrain tokenizer}] {};
+\node[boundary, fit=(dyn), label={above:\bfseries Dynamics transformer}] {};
+\node[boundary, fit=(queries)(latent), label={above:\bfseries Latent compression}] {};
+\node[boundary, fit=(h1)(h2)(h3)(h4), label={below:\bfseries Self-supervised heads (Phase 1 only; frozen in Phase 2)}] {};
+
+% Annotations
+\node[annot, above=2mm of cross, text width=33mm] {$h{=}8$ heads, $d_k{=}64$\\latent set compresses\\$257 \to 64$ tokens};
+
+% Footer
+\node[font=\scriptsize\itshape, text=gray!55!black, below=22mm of h2, xshift=8mm]
+    {47.70 M parameters \quad $\sim 10$ ms latency on Quadro RTX 8000 (FP16, $B{=}1$)};
+
+\end{tikzpicture}
+\end{document}

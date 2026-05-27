@@ -1,0 +1,137 @@
+% TikZ diagram of TerrainFormer's Transformer block (pre-norm, ViT-style).
+% Compile standalone: pdflatex transformer_block_diagram.tex
+% Insert into paper: \input{transformer_block_diagram_body.tex} inside a figure.
+
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath,amssymb}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing}
+
+\begin{document}
+
+% Style definitions
+\tikzset{
+    block/.style    ={draw, rounded corners=2pt, minimum height=7mm, minimum width=22mm,
+                      align=center, font=\small, fill=white},
+    norm/.style     ={block, fill=blue!8,   draw=blue!60},
+    attn/.style     ={block, fill=orange!15, draw=orange!70, minimum width=28mm},
+    mlp/.style      ={block, fill=green!12, draw=green!60!black, minimum width=28mm},
+    op/.style       ={draw, circle, inner sep=0pt, minimum size=4mm, fill=gray!10},
+    io/.style       ={font=\small\itshape},
+    flow/.style     ={-Latex, thick, rounded corners=3pt},
+    residual/.style ={-Latex, thick, dashed, rounded corners=3pt, draw=red!60!black},
+    annot/.style    ={font=\scriptsize\itshape, text=gray!60!black, align=left},
+    qkvbox/.style   ={draw, rounded corners=1.5pt, minimum height=5.5mm, minimum width=10mm,
+                      font=\footnotesize, fill=orange!8, draw=orange!60},
+    layerbox/.style ={draw=gray!50, rounded corners=4pt, dashed, inner sep=5pt, fill=gray!4},
+}
+
+\begin{tikzpicture}[node distance=4mm, every node/.style={font=\small}]
+
+%========================================================================
+% ===== LEFT: one Transformer block (zoomed view) =====
+%========================================================================
+
+\node[io] (xin) {$\mathbf{x}\in\mathbb{R}^{B\times N\times C}$};
+\node[norm, below=of xin] (ln1) {LayerNorm$_1$};
+
+% Multi-Head Attention sub-block (shown expanded)
+\node[attn, below=8mm of ln1] (mha) {Multi-Head Self-Attention\\[-1mm]\scriptsize($H$ heads, $d_k{=}C/H$)};
+
+% Expansion: QKV detail to the right of MHA
+\node[qkvbox, right=18mm of mha, yshift=6mm]  (q) {$\mathbf{Q}$};
+\node[qkvbox, right=18mm of mha]              (k) {$\mathbf{K}$};
+\node[qkvbox, right=18mm of mha, yshift=-6mm] (v) {$\mathbf{V}$};
+\node[qkvbox, right=10mm of k] (sdp) {$\dfrac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}$};
+\node[qkvbox, right=4mm of sdp]  (sm)  {softmax};
+\node[qkvbox, right=4mm of sm]   (av)  {$\cdot\mathbf{V}$};
+
+\draw[flow] (mha.east)--++(3mm,0)|-(q.west);
+\draw[flow] (mha.east)--++(3mm,0)|-(k.west);
+\draw[flow] (mha.east)--++(3mm,0)|-(v.west);
+\draw[flow] (q.east)|-(sdp.west);
+\draw[flow] (k.east)--(sdp.west);
+\draw[flow] (sdp)--(sm);
+\draw[flow] (sm)--(av);
+\draw[flow] (v.east)-|(av.south);
+
+\node[annot, below=0mm of v, xshift=10mm] (qkvann) {one big \texttt{Linear($C{\to}3C$)}\\then split};
+
+% Add+residual #1
+\node[op, below=8mm of mha] (add1) {$+$};
+
+% LN2
+\node[norm, below=6mm of add1] (ln2) {LayerNorm$_2$};
+
+% MLP sub-block expanded
+\node[mlp,  below=8mm of ln2] (mlp)  {MLP (FFN)};
+\node[qkvbox, right=18mm of mlp, yshift=4mm, fill=green!6, draw=green!60!black]  (fc1) {\texttt{Linear} $C\!\to\!4C$};
+\node[qkvbox, right=18mm of mlp, yshift=-1mm, fill=green!6, draw=green!60!black] (gelu){GELU + Dropout};
+\node[qkvbox, right=18mm of mlp, yshift=-6mm, fill=green!6, draw=green!60!black] (fc2) {\texttt{Linear} $4C\!\to\!C$};
+\draw[flow] (mlp.east)--++(3mm,0)|-(fc1.west);
+\draw[flow] (fc1.south)--(gelu.north);
+\draw[flow] (gelu.south)--(fc2.north);
+
+% Add+residual #2
+\node[op, below=6mm of mlp] (add2) {$+$};
+
+\node[io, below=4mm of add2] (xout) {$\mathbf{x}'\in\mathbb{R}^{B\times N\times C}$};
+
+% Main flow arrows
+\draw[flow] (xin) -- (ln1);
+\draw[flow] (ln1) -- (mha);
+\draw[flow] (mha) -- (add1);
+\draw[flow] (add1) -- (ln2);
+\draw[flow] (ln2) -- (mlp);
+\draw[flow] (mlp) -- (add2);
+\draw[flow] (add2) -- (xout);
+
+% Residual #1: from xin around to add1
+\coordinate (resR1) at ($(xin.east)+(20mm,0)$);
+\draw[residual] (xin.east) -| (resR1) |- (add1.east);
+\node[annot, right=2mm of resR1, yshift=-4mm] {residual\\(identity)};
+
+% Residual #2: from add1 around to add2
+\coordinate (resR2) at ($(add1.east)+(20mm,0)$);
+\draw[residual] (add1.east) -| (resR2) |- (add2.east);
+
+% Dotted bracket grouping the block
+\node[layerbox, fit=(ln1)(add2)(qkvann), inner sep=8pt, label={above:\bfseries Transformer Block (one layer)}] (blockbox) {};
+
+%========================================================================
+% ===== RIGHT: stack of N blocks =====
+%========================================================================
+
+\begin{scope}[xshift=125mm, yshift=-15mm]
+\node[io] (sin) {tokens $(B,N,C)$};
+
+\node[block, fill=gray!10, below=4mm of sin]   (b1) {Transformer Block 1};
+\node[block, fill=gray!10, below=2mm of b1]    (b2) {Transformer Block 2};
+\node[font=\Large, below=2mm of b2]            (dots) {$\vdots$};
+\node[block, fill=gray!10, below=2mm of dots]  (bN) {Transformer Block $L$};
+\node[norm, below=4mm of bN]                   (lnf) {LayerNorm (final)};
+\node[io,   below=4mm of lnf]                  (sout) {tokens $(B,N,C)$};
+
+\draw[flow] (sin)-- (b1);
+\draw[flow] (b1) -- (b2);
+\draw[flow] (b2) -- (dots);
+\draw[flow] (dots)--(bN);
+\draw[flow] (bN) -- (lnf);
+\draw[flow] (lnf)-- (sout);
+
+\node[annot, right=4mm of b1, align=left] {
+\textbf{World Model}\\
+$C{=}512$, $H{=}8$, $L{=}6$\\
+$d_k{=}64$, $N{=}257$};
+\node[annot, right=4mm of bN, align=left] {
+\textbf{Decision Transformer}\\
+$C{=}384$, $H{=}6$, $L{=}4$\\
+$d_k{=}64$, $N{=}80$};
+
+\node[layerbox, fit=(sin)(sout)(b1)(b2)(bN)(lnf), inner sep=8pt,
+      label={above:\bfseries Layer Stack}] {};
+\end{scope}
+
+\end{tikzpicture}
+
+\end{document}

@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(done)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(source venv/bin/activate)",
+      "Bash(pip install:*)",
+      "Bash(tee:*)",
+      "Bash(chmod:*)",
+      "Bash(grep:*)",
+      "Bash(nvidia-smi:*)",
+      "Bash(# List files to identify redundancy echo \"\"=== DEBUG/TEST SCRIPTS \\(can delete\\) ===\"\" ls -la scripts/test_*.py echo \"\"\"\" echo \"\"=== SHELL SCRIPTS ===\"\" ls -la *.sh echo \"\"\"\" echo \"\"=== DOCUMENTATION FILES ===\"\" ls -la *.md *.txt)",
+      "Bash(ls:*)",
+      "Bash(__NEW_LINE_f81f9f675cd711ca__ echo \"\")",
+      "Read(//home/rickslab3/Documents/Leo/LidarDustX/**)",
+      "Bash(du:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(while read f)",
+      "Bash(do python3 -c \"import numpy as np; d=np.fromfile\\(''$f'', dtype=np.float32\\); print\\(f''{f}: shape={d.shape}, reshaped={d.shape[0]//4}x4, range_xyz=[{d.reshape\\(-1,4\\)[:,:3].min\\(\\):.2f}, {d.reshape\\(-1,4\\)[:,:3].max\\(\\):.2f}], range_i=[{d.reshape\\(-1,4\\)[:,3].min\\(\\):.2f}, {d.reshape\\(-1,4\\)[:,3].max\\(\\):.2f}]''\\)\")",
+      "Bash(conda run:*)",
+      "Bash(for dir in /home/rickslab3/Documents/Leo/goose_3d_train/lidar/train/*/)",
+      "Bash(for dir in /home/rickslab3/Documents/Leo/goose_3d_train/labels/train/*/)",
+      "Read(//usr/bin/**)",
+      "Bash(/home/rickslab3/Documents/Leo/terrainformer/venv/bin/python3:*)",
+      "Bash(CUDA_VISIBLE_DEVICES=0 python:*)",
+      "Bash(CUDA_VISIBLE_DEVICES=0 /home/rickslab3/anaconda3/bin/python:*)",
+      "Bash(CUDA_VISIBLE_DEVICES=0 /usr/bin/python3:*)",
+      "Bash(/usr/bin/python3.8:*)",
+      "Bash(for seq in 00000 00001 00002 00003 00004)",
+      "Bash(do echo \"=== $seq ===\" ls /home/rickslab3/Documents/Leo/RELLIS/bin/$seq/*.npy)",
+      "Bash(pdflatex -interaction=nonstopmode terrainformer_flowchart.tex)",
+      "Bash(apt-cache show tectonic)",
+      "Bash(apt-cache show texlive-latex-base)"
+    ]
+  }
+}

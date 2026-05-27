@@ -1,0 +1,21 @@
+======================================================================
+PREDICTIVE EVALUATION RESULTS
+======================================================================
+
+[1] CURRENT FRAME (ground-truth observation):
+    Accuracy:  0.8465 (84.65%)
+    Precision: 0.6290
+    Recall:    0.6249
+    F1 Score:  0.5323
+
+[2] PREDICTED FUTURE FRAME (world model prediction):
+    Accuracy:  0.8465 (84.65%)
+    Precision: 0.6290
+    Recall:    0.6249
+    F1 Score:  0.5323
+
+----------------------------------------------------------------------
+Accuracy difference (current − predicted): +0.0000 (+0.00%)
+  → Predicted future actually helps! (0.0% improvement)
+Prediction agreement (same action both paths): 1.0000 (100.00%)
+======================================================================

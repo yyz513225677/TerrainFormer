@@ -1,0 +1,95 @@
+% Decision Transformer (80-token sequence) for TerrainFormer paper.
+% Compile: pdflatex dt_diagram.tex
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,shapes.geometric,decorations.pathreplacing}
+
+\begin{document}
+\tikzset{
+    tok/.style     ={draw, rounded corners=1pt, minimum height=8mm, minimum width=8mm, align=center, font=\scriptsize, fill=white},
+    cTok/.style    ={tok, fill=blue!15,   draw=blue!60},
+    wTok/.style    ={tok, fill=orange!15, draw=orange!70},
+    aTok/.style    ={tok, fill=green!12,  draw=green!60!black},
+    qTok/.style    ={tok, fill=red!12,    draw=red!60},
+    block/.style   ={draw, rounded corners=2pt, minimum height=8mm, minimum width=42mm, align=center, font=\small, fill=white},
+    proc/.style    ={block, fill=orange!10, draw=orange!70},
+    head/.style    ={block, fill=red!8,   draw=red!60, minimum width=46mm, minimum height=7mm},
+    flow/.style    ={-Latex, thick, rounded corners=2pt},
+    annot/.style   ={font=\scriptsize\itshape, text=gray!55!black, align=center},
+    grpLabel/.style={font=\scriptsize\bfseries, align=center},
+    bracket/.style ={decorate, decoration={brace, amplitude=4pt, mirror}, thick},
+}
+
+\begin{tikzpicture}[node distance=2mm, every node/.style={font=\small}]
+
+% ============ Top: 80-token sequence ============
+% Context token
+\node[cTok] (c) {$\mathbf{c}$};
+\node[grpLabel, above=2mm of c] (cLabel) {Context (1)};
+
+% World tokens W_1 .. W_64 (show 4 + ellipsis + 1 + ellipsis + 1)
+\node[wTok, right=2mm of c]    (w1)  {$\mathbf{W}_1$};
+\node[wTok, right=0.5mm of w1] (w2)  {$\mathbf{W}_2$};
+\node[wTok, right=0.5mm of w2] (w3)  {$\mathbf{W}_3$};
+\node[right=0.5mm of w3, font=\small]      (we1) {$\cdots$};
+\node[wTok, right=0.5mm of we1] (w32) {$\mathbf{W}_{32}$};
+\node[right=0.5mm of w32, font=\small]    (we2) {$\cdots$};
+\node[wTok, right=0.5mm of we2] (w64) {$\mathbf{W}_{64}$};
+\node[grpLabel, above=2mm of w32] (wLabel) {World latent tokens (64)};
+
+% Action history A_1 .. A_10 (show 2 + ellipsis + 1)
+\node[aTok, right=2mm of w64]   (a1)  {$\mathbf{A}_1$};
+\node[aTok, right=0.5mm of a1]  (a2)  {$\mathbf{A}_2$};
+\node[right=0.5mm of a2, font=\small]      (ae)  {$\cdots$};
+\node[aTok, right=0.5mm of ae]  (a10) {$\mathbf{A}_{10}$};
+\node[grpLabel, above=2mm of a2, xshift=4mm] (aLabel) {Action history (10)};
+
+% Chunk queries Q_1 .. Q_5
+\node[qTok, right=2mm of a10] (q1) {$\mathbf{Q}_1$};
+\node[qTok, right=0.5mm of q1] (q2) {$\mathbf{Q}_2$};
+\node[qTok, right=0.5mm of q2] (q3) {$\mathbf{Q}_3$};
+\node[qTok, right=0.5mm of q3] (q4) {$\mathbf{Q}_4$};
+\node[qTok, right=0.5mm of q4] (q5) {$\mathbf{Q}_5$};
+\node[grpLabel, above=2mm of q3] (qLabel) {Chunk queries (5)};
+
+% L = 80, d = 384 annotation
+\node[annot, above=10mm of w32] (Llabel) {$L = 80$ tokens, $d = 384$, $+$ learnable positional embeddings};
+
+% ============ Middle: Transformer stack ============
+\node[proc, below=14mm of w32, minimum width=130mm] (tx) {4-layer Transformer, full self-attention\\$h{=}6$, $d_k{=}64$, MLP$\times$4, pre-norm, dropout $0.1$};
+
+% ============ Attention arrows from one chunk query to world + history ============
+\draw[->, very thick, red!60!black, opacity=0.55, dashed]
+    (q3.south) .. controls +(0,-3mm) and +(0,5mm) .. (w3.south);
+\draw[->, very thick, red!60!black, opacity=0.55, dashed]
+    (q3.south) .. controls +(0,-3mm) and +(0,5mm) .. (w32.south);
+\draw[->, very thick, red!60!black, opacity=0.55, dashed]
+    (q3.south) .. controls +(0,-3mm) and +(0,5mm) .. (a2.south);
+\draw[->, very thick, red!60!black, opacity=0.55, dashed]
+    (q3.south) .. controls +(0,-3mm) and +(0,5mm) .. (a10.south);
+\node[annot, right=2mm of q5, yshift=-4mm, text width=22mm] {chunk query\\attends to all\\spatial + temporal\\tokens};
+
+% Flow into transformer
+\draw[flow] (c.south) -- ++(0,-6mm) -| (tx.north);
+\draw[flow] (q5.south) -- ++(0,-6mm) -| (tx.north);
+
+% ============ Output heads ============
+\node[head, below=10mm of tx, xshift=-30mm] (hCur) {Context output $\mathbf{x}_0$\\$\to$ current action logits $(B,12)$};
+\node[head, below=10mm of tx, xshift=30mm]  (hChunk) {Last 5 outputs $\mathbf{x}_{-5:}$\\$\to$ chunk logits $(B,5,12)$};
+
+\draw[flow] (tx.south) -- ++(-30mm,0) |- (hCur.north);
+\draw[flow] (tx.south) -- ++(30mm,0)  |- (hChunk.north);
+
+% ============ TemporalEnsemble ============
+\node[block, fill=blue!8, draw=blue!60, below=10mm of hChunk, minimum width=46mm] (te)
+    {TemporalEnsemble at inference\\$\hat a_t = \arg\max \sum_k \lambda^k \text{chunk}_{t-k}[k]$\\$\lambda = 0.9$, $K = 5$};
+
+\draw[flow] (hChunk.south) -- (te.north);
+
+% ============ Footer ============
+\node[font=\scriptsize\itshape, text=gray!55!black, below=4mm of te]
+    {9.66 M parameters \quad $\sim 5$ ms latency on Quadro RTX 8000 (FP16, $B{=}1$) \quad outputs $A = 12$ discrete actions};
+
+\end{tikzpicture}
+\end{document}

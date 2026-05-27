@@ -1,0 +1,67 @@
+% PointPillars encoder block diagram for TerrainFormer paper.
+% Compile: pdflatex encoder_diagram.tex
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,shapes.geometric}
+
+\begin{document}
+\tikzset{
+    block/.style ={draw, rounded corners=2pt, minimum height=10mm, minimum width=27mm, align=center, font=\small, fill=white},
+    input/.style ={block, fill=blue!8,   draw=blue!60},
+    proc/.style  ={block, fill=orange!12, draw=orange!70},
+    feat/.style  ={block, fill=green!10, draw=green!60!black},
+    outblk/.style   ={block, fill=blue!8,   draw=blue!60},
+    flow/.style  ={-Latex, thick},
+    annot/.style ={font=\scriptsize\itshape, text=gray!55!black, align=left},
+    dimlabel/.style ={font=\scriptsize\ttfamily, text=gray!40!black},
+}
+
+\begin{tikzpicture}[node distance=8mm, every node/.style={font=\small}]
+
+\node[input] (raw) {Raw LiDAR\\point cloud};
+\node[dimlabel, below=-1mm of raw] {$(N,4)$};
+
+\node[proc, right=of raw] (pill) {Pillarisation\\$256{\times}256$ grid};
+\node[dimlabel, below=-1mm of pill] {covers $100{\times}100$\,m};
+
+\node[proc, right=of pill] (aug) {Per-point\\feature aug};
+\node[dimlabel, below=-1mm of aug] {$(P,32,9)$};
+
+\node[proc, right=of aug] (mlp) {Pointwise\\MLP $9{\to}64{\to}64$};
+\node[dimlabel, below=-1mm of mlp] {$(P,32,64)$};
+
+\node[proc, below=14mm of mlp] (pool) {Per-pillar max-pool\\\texttt{scatter\_reduce}};
+\node[dimlabel, below=-1mm of pool] {$(P,64)$};
+
+\node[proc, left=of pool] (scat) {Scatter to dense BEV\\(empty cells $=0$)};
+\node[dimlabel, below=-1mm of scat] {$(64,256,256)$};
+
+\node[proc, left=of scat] (conv) {Two $3{\times}3$ Conv\\+ BN + ReLU};
+\node[dimlabel, below=-1mm of conv] {$(64,256,256)$};
+
+\node[outblk, left=of conv] (bev) {BEV feature\\map};
+\node[dimlabel, below=-1mm of bev] {$(B,64,H,W)$};
+
+\draw[flow] (raw) -- (pill);
+\draw[flow] (pill) -- (aug);
+\draw[flow] (aug) -- (mlp);
+\draw[flow] (mlp) -- (pool);
+\draw[flow] (pool) -- (scat);
+\draw[flow] (scat) -- (conv);
+\draw[flow] (conv) -- (bev);
+
+% Annotations
+\node[annot, above=2mm of pill, text width=30mm] {pillars: vertical\\columns over the grid};
+\node[annot, above=2mm of aug, text width=30mm] {add $(x_c,y_c,z_c,x_p,y_p)$\\to each $(x,y,z,i)$};
+\node[annot, above=2mm of mlp, text width=30mm] {applied per point\\(\emph{not} pooled here)};
+\node[annot, below=2mm of pool, text width=30mm] {element-wise max over\\the 32 points/pillar};
+\node[annot, below=2mm of scat, text width=30mm] {place feature at the\\pillar's grid index};
+\node[annot, below=2mm of conv, text width=30mm] {spatial smoothing\\+ receptive field};
+
+% Footer with parameter / latency
+\node[font=\scriptsize\itshape, text=gray!55!black, below=18mm of pool, xshift=15mm] (foot)
+    {$0.15$ M parameters \quad $\sim 5$ ms latency (Quadro RTX 8000, FP16, $B{=}1$) \quad $\sim 200$ FPS at the encoder stage};
+
+\end{tikzpicture}
+\end{document}

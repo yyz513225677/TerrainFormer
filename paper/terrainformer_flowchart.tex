@@ -1,0 +1,330 @@
+% TerrainFormer — System Flow Chart
+%
+% Compile standalone:
+%   pdflatex terrainformer_flowchart.tex
+%
+% Embed in another document (e.g. IEEEtran):
+%   In preamble:  \usepackage{tikz}
+%                 \usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+%                 \usepackage{xcolor}
+%                 \usepackage{amsmath}
+%   In body:      \input{terrainformer_flowchart}
+%   (The \documentclass / \begin{document} lines are ignored by \input)
+
+\documentclass[tikz, border=22pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, backgrounds, calc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+
+\begin{document}
+
+%% ── Colour palette ───────────────────────────────────────────────────────────
+%% (placed in document body so they are also defined when \input-ted)
+\definecolor{cData}  {HTML}{AED6F1}
+\definecolor{cEnc}   {HTML}{A9DFBF}
+\definecolor{cWorld} {HTML}{FAD7A0}
+\definecolor{cDec}   {HTML}{D7BDE2}
+\definecolor{cLoss}  {HTML}{F1948A}
+\definecolor{cInfer} {HTML}{A3E4D7}
+\definecolor{bgData} {HTML}{D6EAF8}
+\definecolor{bgShared}{HTML}{D5F5E3}
+\definecolor{bgP1}   {HTML}{FEF9E7}
+\definecolor{bgP2}   {HTML}{F5EEF8}
+\definecolor{bgInfer}{HTML}{E8F8F5}
+
+%% ── TikZ styles ──────────────────────────────────────────────────────────────
+%% (placed in document body for the same reason)
+\tikzset{
+  N/.style = {
+    rectangle, rounded corners=5pt,
+    draw=black!45, line width=0.75pt,
+    minimum width=3.5cm, minimum height=0.9cm,
+    align=center, font=\small\sffamily, inner sep=5pt
+  },
+  Ndata/.style  = {N, fill=cData},
+  Nenc/.style   = {N, fill=cEnc},
+  Nworld/.style = {N, fill=cWorld},
+  Ndec/.style   = {N, fill=cDec},
+  Nloss/.style  = {N, fill=cLoss},
+  Ninfer/.style = {N, fill=cInfer},
+  Nseq/.style   = {N, minimum width=14.5cm, minimum height=1.9cm, fill=cDec!45},
+  Ntblk/.style  = {N, minimum width=11.5cm, minimum height=1.1cm, fill=cDec!80},
+  Ntot/.style   = {N, minimum width=13.0cm, minimum height=1.2cm, fill=cLoss},
+  A/.style  = {-{Stealth[length=5pt, width=4pt]}, thick, draw=black!55},
+  Ad/.style = {-{Stealth[length=5pt, width=4pt]}, thick, draw=gray!60, dashed},
+  Lbl/.style = {font=\tiny\ttfamily, fill=white, inner sep=1pt},
+  PH/.style  = {font=\small\bfseries\sffamily, text=black!80},
+}
+
+\begin{tikzpicture}
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  TITLE
+%% ═══════════════════════════════════════════════════════════════════════════
+\node[font=\Large\bfseries\sffamily, text=black!85] (title) at (0, 1.3)
+  {TerrainFormer --- System Flow Chart};
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  1. DATA PIPELINE  (top row, horizontal)
+%% ═══════════════════════════════════════════════════════════════════════════
+\node[Ndata, minimum width=2.8cm] (raw) at (-10.0, 0)
+  {RELLIS-3D\\{\small Phase 2 Data}};
+\node[Ndata, minimum width=3.5cm] (rds) at (-6.0,  0)
+  {RELLIS3DDataset\\{\small chunk\_size=5, stride=1}};
+\node[Ndata, minimum width=3.2cm] (bds) at (-2.0,  0)
+  {BaseDataset\\{\small \_\_getitem\_\_()}};
+\node[Ndata, minimum width=3.0cm] (dl)  at ( 1.8,  0)
+  {DataLoader\\{\small bs=32, nw=8}};
+
+\draw[A] (raw) -- node[Lbl, above]{\tiny actions.npy} (rds);
+\draw[A] (rds) -- node[Lbl, above]{\tiny \{action\_chunk[5]\}} (bds);
+\draw[A] (bds) -- (dl);
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  2. LIDAR ENCODER  (shared between both phases)
+%% ═══════════════════════════════════════════════════════════════════════════
+\node[Nenc, minimum width=4.5cm] (pc)  at (0, -2.1)
+  {point\_cloud \ (B, N, 4)};
+\node[Nenc, minimum width=6.2cm] (pp)  at (0, -3.6)
+  {PointPillarProjection\\{\small PFN: Linear(9{\to}64{\to}64), max-pool \ $|$\ 12k pillars, 32 pts}\\{\small BEV: 2$\times$Conv(64,3$\times$3)+BN+ReLU \ $|$\ $\sim$5\,ms}};
+\node[Nenc, minimum width=5.2cm] (bev) at (0, -5.1)
+  {BEV Feature Map\\{\small (B,\ 64,\ 256,\ 256)}};
+
+\draw[A] (dl.south) -- ++(0,-0.65) -| (pc.north);
+\draw[A] (pc)  -- (pp);
+\draw[A] (pp)  -- (bev);
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  3. WORLD MODEL
+%% ═══════════════════════════════════════════════════════════════════════════
+\node[Nworld, minimum width=9.0cm] (wm) at (0, -6.9)
+  {WorldModel\\{\small Tokenizer: Conv2d(64{\to}512, 16{\times}16) $\to$ 257 tok (256 patches + CLS)}\\{\small DynamicsViT: L=6,\ H=8,\ d=512,\ FFN$\times$4,\ drop=0.1}\\{\small LatentState: 64 cross-attn queries $\to$ (B,64,512) + global (B,512)}};
+\draw[A] (bev) -- (wm);
+
+%% FROZEN badge
+\node[draw=red!55, fill=red!8, rounded corners=3pt,
+      font=\tiny\bfseries\sffamily, text=red!70,
+      anchor=west] at ($(wm.east)+(0.15,0)$) (frzbadge)
+  {FROZEN\\in Phase 2};
+
+%% World model feature outputs
+\node[Nworld, minimum width=3.5cm] (wg) at (-3.2, -8.8)
+  {global feature\\{\small (B,\ 512)}};
+\node[Nworld, minimum width=3.5cm] (wl) at ( 3.2, -8.8)
+  {latent tokens\\{\small (B,\ 64,\ 512)}};
+
+\draw[A] (wm.south) -- ++(0,-0.45) -| (wg.north);
+\draw[A] (wm.south) -- ++(0,-0.45) -| (wl.north);
+
+%% Phase 1 training data sources
+\node[Ndata, minimum width=2.9cm, minimum height=0.72cm] (ldx) at (7.5, -4.2)
+  {LidarDustX\\{\tiny 5{,}229 frames\ $|$\ 6 sensors}};
+\node[Ndata, minimum width=2.9cm, minimum height=0.72cm] (goose) at (11.5, -4.2)
+  {GOOSE-3D\\{\tiny 5{,}403 frames\ $|$\ VLS128}};
+
+%% Phase 1 data → WorldModel (dashed: training-time inputs only)
+\coordinate (p1join) at (4.8, -5.7);
+\draw[Ad] (ldx.south)   -- ++(0,-0.25) -| (p1join);
+\draw[Ad] (goose.south) -- ++(0,-0.25) -| (p1join);
+\draw[Ad] (p1join) -- ($(wm.east)+(0, 0.22)$);
+
+%% Phase 1 prediction heads  (right column)
+\node[Nworld, minimum width=2.9cm, minimum height=0.72cm] (wht) at (9.5, -6.1)
+  {traversability\\{\tiny (B,1,H,W)}};
+\node[Nworld, minimum width=2.9cm, minimum height=0.72cm] (whe) at (9.5, -7.1)
+  {elevation\\{\tiny (B,1,H,W)}};
+\node[Nworld, minimum width=2.9cm, minimum height=0.72cm] (whs) at (9.5, -8.1)
+  {semantics\\{\tiny (B,20,H,W)}};
+\node[Nworld, minimum width=2.9cm, minimum height=0.72cm] (whf) at (9.5, -9.1)
+  {future frames\\{\tiny (B,5,C,H,W)}};
+
+\coordinate (wmbr) at ($(wm.east)+(1.1,0)$);
+\draw[Ad] (wm.east) -- (wmbr);
+\draw[Ad] (wmbr) |- (wht);
+\draw[Ad] (wmbr) |- (whe);
+\draw[Ad] (wmbr) |- (whs);
+\draw[Ad] (wmbr) |- (whf);
+
+\node[Nloss, minimum width=4.8cm] (wloss) at (9.5, -10.4)
+  {WorldModelLoss\\{\tiny Chamfer$\times$1.0 + BCE$\times$0.5 + MSE$\times$0.3 + CE$\times$0.5 + Contrastive$\times$0.2 ($\tau$=0.07)}};
+\draw[Ad] (wht) -- (wloss);
+\draw[Ad] (whe) -- (wloss);
+\draw[Ad] (whs) -- (wloss);
+\draw[Ad] (whf) -- (wloss);
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  4. DECISION TRANSFORMER  (Phase 2)
+%% ═══════════════════════════════════════════════════════════════════════════
+
+%% --- Extra inputs ---
+\node[Ndec, minimum width=2.2cm] (gv)  at (-8.5, -10.8)
+  {goal\\{\small (B,2)}};
+\node[Ndec, minimum width=2.2cm] (sv)  at (-5.8, -10.8)
+  {state\\{\small (B,6)}};
+\node[Ndec, minimum width=4.2cm] (ahe) at ( 4.5, -10.8)
+  {ActionTokenizer\\{\small Embed(12{\to}128) + temporal\_embed}\\{\small proj + LN $\to$ (B,10,128)}};
+
+%% --- Context aggregator ---
+\node[Ndec, minimum width=10.0cm] (ca) at (0, -12.5)
+  {ContextAggregator\\{\small state(6{\to}128) + goal(2{\to}128) + action\_agg(128) + world\_proj(384) $\to$ concat(768)}\\{\small Linear(768{\to}384) + LN \ $\to$ \ CrossAttn(H=8) over latent tokens \ $\to$ \ context (B,\ 384)}};
+
+\draw[A] (wg.south) |- (ca.west);
+\draw[A] (wl.south) -- (ahe.north);
+\draw[A] (ahe.south) |- (ca.east);
+\draw[A] (sv.south)  |- (ca.north);
+\draw[A] (gv.south)  |- (ca.north);
+
+%% --- Token sequence ---
+\node[Nseq] (tseq) at (0, -14.9)
+  {{\normalsize\bfseries Token Sequence \ (B,\ 80,\ 384)}\\[4pt]
+   {\normalsize\ttfamily
+    [\;context(1)\;|\;world\_tokens(64)\;|\;action\_tokens(10)\;|\;chunk\_queries(5)\;]}\\[3pt]
+   {\small
+    world: Linear(512$\to$384)\quad
+    actions: Linear(128$\to$384)\quad
+    chunk\_queries: \texttt{nn.Parameter}\quad
+    $+$ pos\_embed[:, :80]}};
+\draw[A] (ca) -- (tseq);
+
+%% --- Transformer blocks ---
+\node[Ntblk] (tb) at (0, -17.5)
+  {4 $\times$ DecisionTransformerBlock\\
+   {\small
+    LayerNorm $\to$ Multi-Head Self-Attention (H=6) $\to$
+    LayerNorm $\to$ MLP (FFN $\times$4) + Dropout}};
+\draw[A] (tseq) -- (tb);
+
+%% --- Split: current step vs chunk queries ---
+\node[Ndec, minimum width=4.8cm] (oh) at (-4.8, -19.8)
+  {OutputHeads \ (x[:,0])\\
+   {\small ActionHead: 384{\to}256{\to}12}\\
+   {\small ConfHead: 384{\to}128{\to}1 (sigmoid)}\\
+   {\small TravHead: 384{\to}128{\to}1 (sigmoid)}};
+
+\node[Ndec, minimum width=4.2cm] (ck) at ( 4.8, -19.8)
+  {chunk\_logits\\
+   {\small x[:,$-$5:] $\to$ action\_head}\\
+   {\small (B,\ 5,\ 12)}};
+
+\coordinate (tbbr) at ($(tb.south)+(0,-0.55)$);
+\draw[A] (tb.south) -- (tbbr);
+\draw[A] (tbbr) -| node[Lbl, above left]{\tiny x[:,0] \ current step} (oh.north);
+\draw[A] (tbbr) -| node[Lbl, above right]{\tiny x[:,$-$5:] \ chunk queries} (ck.north);
+
+%% --- Losses ---
+\node[Nloss, minimum width=3.0cm] (fl) at (-5.8, -22.2)
+  {FocalLoss $\times$1.0\\{\small $\gamma$=2.0,\ ls=0.1}};
+\node[Nloss, minimum width=2.6cm] (tl) at (-1.8, -22.2)
+  {Trav BCE $\times$0.2};
+\node[Nloss, minimum width=3.2cm] (kl) at ( 4.0, -22.2)
+  {Chunk FocalLoss $\times$0.5\\{\small reshape (B$\cdot$K,\ 12)}};
+
+\draw[A] (oh.south) -- ++(0,-0.35) -| (fl.north);
+\draw[A] (oh.south) -- ++(0,-0.35) -| (tl.north);
+\draw[A] (ck.south) -- ++(0,-0.35) -| (kl.north);
+
+\node[Ntot] (total) at (0, -24.1)
+  {$\mathcal{L}_{\mathrm{total}} =
+    \mathcal{L}_{\mathrm{focal}} +
+    0.2\,\mathcal{L}_{\mathrm{trav}} +
+    0.5\,\mathcal{L}_{\mathrm{chunk}}$\\
+   {\small
+    AdamW\ (lr=3e-4, wd=0.05)\quad
+    cosine LR schedule\ (warmup=3 ep, min\_lr=1e-6)\quad
+    fp16 mixed precision}};
+
+\draw[A] (fl.south) |- (total.west);
+\draw[A] (tl.south) -- (total);
+\draw[A] (kl.south) |- (total.east);
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  5. INFERENCE  (right branch from chunk_logits)
+%% ═══════════════════════════════════════════════════════════════════════════
+\node[Ninfer, minimum width=4.0cm] (te) at (12.0, -19.8)
+  {TemporalEnsemble\\
+   {\small K=5 frames,\ decay=0.9}\\
+   {\small accum=$\sum_{k=0}^{K-1} 0.9^{k}\cdot\mathrm{chunk}_{k}$}};
+
+\node[Ninfer, minimum width=4.0cm] (act) at (12.0, -22.5)
+  {\textbf{action} $\in \{0\ldots11\}$\\
+   {\small stop / fwd\_slow / fwd\_med}\\
+   {\small fwd\_fast / L\_sharp / L\_med}\\
+   {\small L\_slight / R\_slight / R\_med}\\
+   {\small R\_sharp / fwd\_L / fwd\_R}};
+
+\draw[A] (ck.east) -- node[Lbl, above]{\tiny chunk\_logits (B,5,12)} (te.west);
+\draw[A] (te) -- (act);
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  6. RESULTS SUMMARY
+%% ═══════════════════════════════════════════════════════════════════════════
+\node[Ninfer, minimum width=7.5cm, minimum height=1.4cm] (res) at (12.0, -25.5)
+  {\textbf{Test Results (RELLIS-3D)}\\
+   {\small Accuracy:\ \textbf{87.31\%}\quad Macro F1:\ \textbf{0.7948}}\\
+   {\small Predictive agreement:\ \textbf{98.82\%}\quad Acc drop:\ \textbf{0.79\%}}};
+
+\draw[A] (act.south) -- (res.north);
+
+%% ═══════════════════════════════════════════════════════════════════════════
+%%  PHASE BACKGROUND BOXES
+%% ═══════════════════════════════════════════════════════════════════════════
+\begin{pgfonlayer}{background}
+
+  %% — Phase 2 data pipeline —
+  \node[fill=bgData, rounded corners=10pt, inner sep=12pt,
+        fit=(raw)(rds)(bds)(dl)(pc)] (bgdata) {};
+  \node[PH, above=4pt of bgdata.north west, anchor=south west]
+    {PHASE 2 DATA PIPELINE (RELLIS-3D)};
+
+  %% — Phase 1: encoder + world model + prediction heads (top-left label) —
+  \node[fill=bgP1, rounded corners=10pt, inner sep=14pt,
+        fit=(pp)(bev)(wm)(wg)(wl)(frzbadge)(ldx)(goose)(wht)(whe)(whs)(whf)(wloss)] (bgp1) {};
+  \node[PH, above=4pt of bgp1.north west, anchor=south west]
+    {\textbf{PHASE 1} --- World Model Pre-training
+     (LidarDustX + GOOSE-3D; RELLIS-3D excluded)
+     $|$\ 47.70M params,\ 100 ep,\ $\sim$13 h};
+
+  %% — Phase 2: decision transformer —
+  \node[fill=bgP2, rounded corners=10pt, inner sep=12pt,
+        fit=(gv)(sv)(ahe)(ca)(tseq)(tb)(oh)(ck)(fl)(tl)(kl)(total)] (bgp2) {};
+  \node[PH, above=4pt of bgp2.north west, anchor=south west]
+    {\textbf{PHASE 2} --- Decision Transformer Training
+     (encoder + world model frozen)
+     $|$\ 57.36M total,\ 9.66M trainable,\ 50 ep,\ $\sim$5 h};
+
+  %% — Inference —
+  \node[fill=bgInfer, rounded corners=10pt, inner sep=12pt,
+        fit=(te)(act)(res)] (bginfer) {};
+  \node[PH, above=4pt of bginfer.north west, anchor=south west]
+    {INFERENCE};
+
+\end{pgfonlayer}
+
+%% ── Legend (drawn as regular nodes so custom styles are in scope) ───────────
+\node[font=\small\bfseries\sffamily, text=black!70]
+  (legtitle) at (-10.5, -26.2) {Legend:};
+
+\node[Ndata,  minimum width=1.6cm, minimum height=0.5cm,
+      font=\tiny, right=0.4cm of legtitle] (leg1) {Data};
+\node[Nenc,   minimum width=1.6cm, minimum height=0.5cm,
+      font=\tiny, right=0.3cm of leg1]    (leg2) {Encoder};
+\node[Nworld, minimum width=1.8cm, minimum height=0.5cm,
+      font=\tiny, right=0.3cm of leg2]    (leg3) {World Model};
+\node[Ndec,   minimum width=1.8cm, minimum height=0.5cm,
+      font=\tiny, right=0.3cm of leg3]    (leg4) {Decision};
+\node[Nloss,  minimum width=1.4cm, minimum height=0.5cm,
+      font=\tiny, right=0.3cm of leg4]    (leg5) {Loss};
+\node[Ninfer, minimum width=1.6cm, minimum height=0.5cm,
+      font=\tiny, right=0.3cm of leg5]    (leg6) {Inference};
+
+\node[font=\small\sffamily, text=black!60, right=0.6cm of leg6]
+  {solid arrow $=$ forward pass \quad dashed arrow $=$ Phase~1 branch};
+
+\begin{pgfonlayer}{background}
+  \node[fill=white, draw=black!25, rounded corners=5pt, inner sep=8pt,
+        fit=(legtitle)(leg1)(leg2)(leg3)(leg4)(leg5)(leg6)] {};
+\end{pgfonlayer}
+
+\end{tikzpicture}
+\end{document}

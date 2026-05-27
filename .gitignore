@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# Virtual environments
+venv/
+venv_*/
+.venv/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Project: training outputs
+# Keep small artefacts (metrics.csv, evaluation_results.txt, plot PNGs).
+# Exclude large checkpoints (.pt, often 500+ MB) and old/backup runs.
+outputs/**/*.pt
+outputs/**/optimizer_state*.pt
+outputs/BACKUP_*/
+outputs/*_OLD_*/
+outputs/run_*.log
+outputs/phase2_rerun_*.log
+outputs/*.log
+
+# LaTeX build artefacts
+paper/**/*.aux
+paper/**/*.log
+paper/**/*.out
+paper/**/*.toc
+paper/**/*.synctex.gz
+paper/**/*.fls
+paper/**/*.fdb_latexmk
+paper/**/*.bbl
+paper/**/*.blg
+paper/**/*.nav
+paper/**/*.snm
+
+# Compiled PDFs (regenerate via pdflatex)
+paper/Terrainformer_MDPI/terrainformer_mdpi.pdf
+paper/Terrainformer_MDPI/encoder_diagram.pdf
+paper/Terrainformer_MDPI/world_model_diagram.pdf
+paper/Terrainformer_MDPI/dt_diagram.pdf
+paper/Terrainformer_MDPI/transformer_block_diagram.pdf
+
+# Large reviewer/template files (keep .tex, not the binary helper)
+paper/Terrainformer_MDPI/sensors-*.pdf
+
+# OS clutter
+.DS_Store
+Thumbs.db
