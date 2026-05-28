@@ -1,7 +1,7 @@
 \documentclass[sensors,article,submit,pdftex,moreauthors]{Definitions/mdpi}
 %DIF LATEXDIFF DIFFERENCE FILE
 %DIF DEL old.tex   Thu May 28 14:28:56 2026
-%DIF ADD new.tex   Thu May 28 18:33:42 2026
+%DIF ADD new.tex   Thu May 28 18:40:09 2026
 \firstpage{1}
 \makeatletter
 \setcounter{page}{\@firstpage}
@@ -53,7 +53,9 @@ $^{2}$ \quad Department of Electrical and Computer Engineering, The University o
 
 \abstract{\textcolor{red}{Off-road navigation requires real-time traversability estimation from raw LiDAR, without lane markings or other structured cues. TerrainFormer is a two-stage design that addresses these requirements: a world model encodes 3D point clouds into latent terrain features, and a temporal decision transformer maps those features to discrete navigation actions. The two stages are trained independently. Phase 1 pretrains the world model on LidarDustX and GOOSE-3D with four self-supervised heads (traversability, elevation, semantic segmentation, future-frame prediction); these datasets carry no action labels. Phase 2 freezes the world model and trains the decision transformer with behavioural cloning on RELLIS-3D, using action labels derived from vehicle poses. The two training sets do not overlap. End-to-end inference runs at $\sim$50 FPS on an NVIDIA Quadro RTX 8000: a 0.15 M-parameter PointPillars encoder ($\sim$5 ms), a 47.7 M-parameter ViT world model ($\sim$10 ms), and a 9.66 M-parameter 80-token decision transformer ($\sim$5 ms). On the RELLIS-3D test split we report 87.31\% top-1 accuracy and 0.7948 macro F1 across 12 forward-motion action classes, with all classes above F1 0.65. Substituting the world model's predicted future frame for the ground-truth observation costs 0.79\% accuracy and 98.82\% of predictions are unchanged: the decision transformer reads its action signal from the learned terrain representation, not from short-term sensor noise.}}
 
-\keyword{Autonomous navigation, off-road robotics, world models, decision transformers, LiDAR perception, point cloud processing, behavioral cloning, terrain traversability, temporal reasoning, cross-dataset generalization.}
+%DIF < \keyword{Autonomous navigation, off-road robotics, world models, decision transformers, LiDAR perception, point cloud processing, behavioral cloning, terrain traversability, temporal reasoning, cross-dataset generalization.}
+%DIF -------
+\keyword{Autonomous navigation, off-road robotics, world models, decision transformers, LiDAR perception, point cloud processing, behavioural cloning, terrain traversability, temporal reasoning, cross-dataset generalisation.} %DIF > 
 %DIF PREAMBLE EXTENSION ADDED BY LATEXDIFF
 %DIF UNDERLINE PREAMBLE %DIF PREAMBLE
 \RequirePackage[normalem]{ulem} %DIF PREAMBLE
@@ -333,7 +335,7 @@ The LiDAR encoder processes raw 3D point clouds of up to $N = 65{,}536$ points, 
 The encoder operates as follows:
 
 \begin{enumerate}
-    \item \textbf{Pillarization}: Points are discretized into vertical pillars on a $256 \times 256$ BEV grid covering $100\,\text{m} \times 100\,\text{m}$ ($x, y \in [-50, 50]$\,m). Each pillar aggregates up to 32 points; pillars exceeding this cap are uniformly subsampled.
+    \item \textbf{\DIFdelbegin \DIFdel{Pillarization}\DIFdelend \DIFaddbegin \DIFadd{Pillarisation}\DIFaddend }: Points are \DIFdelbegin \DIFdel{discretized }\DIFdelend \DIFaddbegin \DIFadd{discretised }\DIFaddend into vertical pillars on a $256 \times 256$ BEV grid covering $100\,\text{m} \times 100\,\text{m}$ ($x, y \in [-50, 50]$\,m). Each pillar aggregates up to 32 points; pillars exceeding this cap are uniformly subsampled.
     \item \textbf{Feature Augmentation}: Each point is augmented with 5 additional features: $(x_c, y_c, z_c)$ offset from pillar centroid and $(x_p, y_p)$ offset from pillar geometric center, yielding a 9-dimensional per-point input.
     \item \textbf{Pillar Feature Network}: A two-layer pointwise MLP ($9 \rightarrow 64 \rightarrow 64$ with BatchNorm and ReLU) is applied independently to every point. The MLP itself is \emph{not} pooled; rather, the per-point 64-dimensional outputs are subsequently aggregated within each pillar by an element-wise max operation (implemented via vectorized \texttt{scatter\_reduce}). The result is a single 64-dimensional feature per occupied pillar, which is then scattered back onto the $256 \times 256$ BEV grid (empty cells set to zero).
     \item \textbf{BEV Backbone}: Two $3 \times 3$ convolutional layers with BatchNorm and ReLU refine the resulting $64 \times 256 \times 256$ spatial feature map.
@@ -532,7 +534,7 @@ The world model (LiDAR encoder + BEV projection + world model) is trained via se
 where $\mathcal{L}_\text{recon}$ is Chamfer distance for future frame reconstruction ($\lambda_r = 1.0$), $\mathcal{L}_\text{trav}$ is binary cross-entropy for traversability ($\lambda_t = 0.5$), $\mathcal{L}_\text{elev}$ is mean squared error for elevation ($\lambda_e = 0.3$), $\mathcal{L}_\text{sem}$ is cross-entropy for semantic segmentation ($\lambda_s = 0.5$), and $\mathcal{L}_\text{con}$ is contrastive loss with temperature $\tau = 0.07$ ($\lambda_c = 0.2$).
 
 \subsubsection{Phase 2: Decision Transformer Training}
-The decision transformer is trained via behavioral cloning with the PointPillars encoder and world model parameters frozen. To address severe class imbalance, we employ focal loss~\cite{lin2017} with automatic inverse-frequency class weighting:
+The decision transformer is trained via behavio\DIFaddbegin \DIFadd{u}\DIFaddend ral cloning with the PointPillars encoder and world model parameters frozen. To address severe class imbalance, we employ focal loss~\cite{lin2017} with automatic inverse-frequency class weighting:
 \begin{equation}
     \mathcal{L}_\text{focal} = -\alpha_c (1 - p_t)^\gamma \log(p_t)
 \end{equation}
@@ -719,7 +721,7 @@ F1 Score (macro) & --- & 0.7948 \\
 \end{tabular}
 \end{table}
 
-The model achieves \textbf{87.31\%} test accuracy despite cross-dataset generalization, with a macro F1 of \textbf{0.7948} showing strong balanced performance across all 12 action classes. The two dominant classes (stop 33.3\%, fwd\_fast 34.8\%) account for 68.1\% of test samples, yet focal loss and action-chunk supervision prevent the model from collapsing to majority-class predictions.
+The model achieves \textbf{87.31\%} test accuracy despite cross-dataset \DIFdelbegin \DIFdel{generalization}\DIFdelend \DIFaddbegin \DIFadd{generalisation}\DIFaddend , with a macro F1 of \textbf{0.7948} showing strong balanced performance across all 12 action classes. The two dominant classes (stop 33.3\%, fwd\_fast 34.8\%) account for 68.1\% of test samples, yet focal loss and action-chunk supervision prevent the model from collapsing to majority-class predictions.
 
 \subsubsection{Per-Class Analysis}
 Table~\ref{tab:per_class} presents per-class metrics and the action distribution in the test set.
@@ -903,9 +905,9 @@ default }\\
 
 \subsection{Cross-Dataset Generalization}
 
-A key finding of this work is the successful cross-dataset generalization of learned terrain representations. The world model, trained exclusively on LidarDustX (construction/dust environments) and GOOSE-3D (European outdoor scenes with varied weather), produces features that enable effective decision-making on RELLIS-3D (US off-road vegetation-heavy terrain) without any fine-tuning.
+A key finding of this work is the successful cross-dataset \DIFdelbegin \DIFdel{generalization }\DIFdelend \DIFaddbegin \DIFadd{generalisation }\DIFaddend of learned terrain representations. The world model, trained exclusively on LidarDustX (construction/dust environments) and GOOSE-3D (European outdoor scenes with varied weather), produces features that enable effective decision-making on RELLIS-3D (US off-road vegetation-heavy terrain) without any fine-tuning.
 
-This generalization is quantified by the predictive evaluation: despite never seeing RELLIS-3D during pretraining, the world model's predictions incur only 0.79\% accuracy degradation with 98.82\% action agreement. This suggests the world model learns \emph{domain-agnostic} terrain features (traversability gradients, obstacle boundaries, elevation patterns) rather than dataset-specific textures or LiDAR sensor characteristics.
+This \DIFdelbegin \DIFdel{generalization }\DIFdelend \DIFaddbegin \DIFadd{generalisation }\DIFaddend is quantified by the predictive evaluation: despite never seeing RELLIS-3D during pretraining, the world model's predictions incur only 0.79\% accuracy degradation with 98.82\% action agreement. This suggests the world model learns \emph{domain-agnostic} terrain features (traversability gradients, obstacle boundaries, elevation patterns) rather than dataset-specific textures or LiDAR sensor characteristics.
 
 The practical implication is that world models can be pretrained on readily available LiDAR datasets (which often lack action labels) and deployed on new platforms with different sensors and terrains, with only the lightweight decision transformer requiring platform-specific training.
 
@@ -1004,7 +1006,7 @@ The PointPillars encoder (${\sim}5$\,ms, ${\sim}200$\,FPS) provides $20\times$ h
 
 \subsection{Model Complexity}
 
-The total model comprises 57.36M parameters (47.70M world model + 9.66M decision transformer). The PointPillars encoder contributes only 0.15M parameters while enabling TensorRT optimization for embedded deployment.
+The total model comprises 57.36M parameters (47.70M world model + 9.66M decision transformer). The PointPillars encoder contributes only 0.15M parameters while enabling TensorRT \DIFdelbegin \DIFdel{optimization }\DIFdelend \DIFaddbegin \DIFadd{optimisation }\DIFaddend for embedded deployment.
 
 % ============================================================
 \section{\DIFdelbegin \DIFdel{Conclusions}\DIFdelend \DIFaddbegin \DIFadd{Conclusion and Future Works}\DIFaddend }
