@@ -196,13 +196,7 @@ Behavioral cloning (BC) learns policies directly from expert demonstrations \cit
 
 \begin{figure}[H]
     \centering
-    {\setlength{\fboxrule}{3pt}\setlength{\fboxsep}{4pt}\fcolorbox{red}{white}{%
-        \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
-        \hfill\colorbox{red}{\textcolor{white}{\textbf{\footnotesize\,NEW\,}}}%
-        \\[-1.2ex]
-        \includegraphics[width=\linewidth]{tech_tree.png}%
-        \end{minipage}%
-    }}
+    \includegraphics[width=\linewidth]{tech_tree.png}
     \caption{\DIFaddFL{Taxonomy of related work on off-road autonomous navigation. The four solid-line branches are classical geometric approaches, deep-learning perception (semantic segmentation and traversability), end-to-end imitation learning, and the more recent world-model-plus-sequence-policy family. TerrainFormer sits at the leaf of the last branch. Dashed red arrows mark the prior components TerrainFormer reuses: BEV world models from urban driving \mbox{%DIFAUXCMD
 \cite{hu2022, yang2023}}\hskip0pt%DIFAUXCMD
 , decision-transformer architectures from offline RL \mbox{%DIFAUXCMD
@@ -330,13 +324,7 @@ The LiDAR encoder processes raw 3D point clouds of up to $N = 65{,}536$ points, 
     \centering
     \DIFdelbeginFL %DIFDELCMD < \includegraphics[width=\linewidth]{encoder_diagram.pdf}
 %DIFDELCMD <     %%%
-\DIFdelendFL \DIFaddbeginFL {\setlength{\fboxrule}{3pt}\setlength{\fboxsep}{4pt}\fcolorbox{red}{white}{%
-        \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
-        \hfill\colorbox{red}{\textcolor{white}{\textbf{\footnotesize\,NEW\,}}}%
-        \\[-1.2ex]
-        \includegraphics[width=\linewidth]{encoder_diagram.png}%
-        \end{minipage}%
-    }}
+\DIFdelendFL \DIFaddbeginFL \includegraphics[width=\linewidth]{encoder_diagram.png}
     \DIFaddendFL \caption{Component view of the PointPillars LiDAR encoder used by TerrainFormer. The pipeline is read left-to-right (top row) then folded back right-to-left (bottom row). Critically, the per-point MLP operates independently on every point and is \emph{not} pooled itself; max-pooling is applied to the MLP \emph{outputs} within each pillar (Section~\ref{sec:lidar_encoder}). Tensor shapes are annotated below each block.}
     \label{fig:encoder_diagram}
 \end{figure}
@@ -402,13 +390,7 @@ The world model learns to predict terrain dynamics and extract rich representati
     \centering
     \DIFdelbeginFL %DIFDELCMD < \includegraphics[width=\linewidth]{world_model_diagram.pdf}
 %DIFDELCMD <     %%%
-\DIFdelendFL \DIFaddbeginFL {\setlength{\fboxrule}{3pt}\setlength{\fboxsep}{4pt}\fcolorbox{red}{white}{%
-        \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
-        \hfill\colorbox{red}{\textcolor{white}{\textbf{\footnotesize\,NEW\,}}}%
-        \\[-1.2ex]
-        \includegraphics[width=\linewidth]{world_model_diagram.png}%
-        \end{minipage}%
-    }}
+\DIFdelendFL \DIFaddbeginFL \includegraphics[width=\linewidth]{world_model_diagram.png}
     \DIFaddendFL \caption{Component view of the world model. The three internal modules (terrain tokenizer, dynamics transformer, latent compression) and the four self-supervised heads used during Phase 1 pretraining are shown explicitly. Only $\mathbf{Z}$ (64 latent tokens) and $\mathbf{z}_\text{global}$ are passed on to the decision transformer in Phase 2; the four prediction heads remain unused at inference and after Phase 1 the entire world model is frozen.}
     \label{fig:world_model_diagram}
 \end{figure}
@@ -441,13 +423,7 @@ The decision transformer predicts discrete navigation actions using a token-sequ
     \centering
     \DIFdelbeginFL %DIFDELCMD < \includegraphics[width=\linewidth]{dt_diagram.pdf}
 %DIFDELCMD <     %%%
-\DIFdelendFL \DIFaddbeginFL {\setlength{\fboxrule}{3pt}\setlength{\fboxsep}{4pt}\fcolorbox{red}{white}{%
-        \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
-        \hfill\colorbox{red}{\textcolor{white}{\textbf{\footnotesize\,NEW\,}}}%
-        \\[-1.2ex]
-        \includegraphics[width=\linewidth]{dt_diagram.png}%
-        \end{minipage}%
-    }}
+\DIFdelendFL \DIFaddbeginFL \includegraphics[width=\linewidth]{dt_diagram.png}
     \DIFaddendFL \caption{Component view of the decision transformer. The 80-token sequence (top) is composed of one context token $\mathbf{c}$, the 64 world latent tokens, 10 action-history tokens, and 5 learnable chunk-query tokens. Dashed red arrows from one chunk query illustrate the cross-modal attention pattern: every chunk query attends to all spatial (world) and temporal (action-history) tokens simultaneously. The context-token output predicts the current action and confidence; the last five output positions predict the action chunk $(B, K{=}5, A{=}12)$; TemporalEnsemble at inference aggregates overlapping chunks with exponential-decay weighting.}
     \label{fig:dt_diagram}
 \end{figure*}
@@ -593,13 +569,7 @@ We use three publicly available off-road LiDAR datasets that play complementary 
 
 \begin{figure}[H]
     \centering
-    {\setlength{\fboxrule}{3pt}\setlength{\fboxsep}{4pt}\fcolorbox{red}{white}{%
-        \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
-        \hfill\colorbox{red}{\textcolor{white}{\textbf{\footnotesize\,NEW\,}}}%
-        \\[-1.2ex]
-        \includegraphics[width=\linewidth]{dataset_examples.png}%
-        \end{minipage}%
-    }}
+    \includegraphics[width=\linewidth]{dataset_examples.png}
     \caption{Representative LiDAR scans from each dataset, projected to BEV and coloured by height (clip range $-2.5$ m to $+4.0$ m). (a) RELLIS-3D --- vegetation-heavy off-road, Ouster OS1-64 ($\sim$37 k points/scan). (b) LidarDustX --- dusty construction environment, multi-sensor capture ($\sim$111 k points/scan with the LS128 sensor shown). (c) GOOSE-3D --- mixed European outdoor (forests, fields, campus), Velodyne VLS128 ($\sim$199 k points/scan). The red triangle marks the ego vehicle.}
     \label{fig:dataset_examples}
 \end{figure}
@@ -681,13 +651,7 @@ Validation loss as a function of epoch is plotted in Fig.~\ref{fig:loss_curves} 
 
 \begin{figure}[H]
     \centering
-    {\setlength{\fboxrule}{3pt}\setlength{\fboxsep}{4pt}\fcolorbox{red}{white}{%
-        \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
-        \hfill\colorbox{red}{\textcolor{white}{\textbf{\footnotesize\,NEW\,}}}%
-        \\[-1.2ex]
-        \includegraphics[width=\linewidth]{loss_curves.png}%
-        \end{minipage}%
-    }}
+    \includegraphics[width=\linewidth]{loss_curves.png}
     \caption{Training curves for both phases. \textbf{Phase 1 (left):} world-model training and validation total loss vs.\ epoch (best validation loss $0.3425$ at epoch~20, red star). \textbf{Phase 2 (right):} decision-transformer focal loss (green, left axis) and validation accuracy (red, right axis) vs.\ epoch (best validation accuracy $0.8953$ at epoch~3, black star). Solid lines show training metrics; dashed lines show validation metrics. Each curve is from a single training run on a Quadro RTX 8000.}
     \label{fig:loss_curves}
 \end{figure}
@@ -971,13 +935,7 @@ In addition to the per-frame metrics reported in Section~\ref{sec:results}, Terr
 
 \begin{figure}[H]
     \centering
-    {\setlength{\fboxrule}{3pt}\setlength{\fboxsep}{4pt}\fcolorbox{red}{white}{%
-        \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}%
-        \hfill\colorbox{red}{\textcolor{white}{\textbf{\footnotesize\,NEW\,}}}%
-        \\[-1.2ex]
-        \includegraphics[width=\linewidth]{simulator_screenshot.png}%
-        \end{minipage}%
-    }}
+    \includegraphics[width=\linewidth]{simulator_screenshot.png}
     \caption{Real-time simulation interface used to exercise TerrainFormer at 10\,Hz on RELLIS-3D test sequences. The large left panel shows the BEV point cloud (height-coloured) with the ego vehicle marker; the upper-right panel shows the predicted traversability map (computed from a height-variance proxy of the point cloud); the lower-right card shows the decision-transformer's predicted action with a confidence bar and a ground-truth-match indicator; the bottom panel shows the per-action probability distribution across all 12 classes. Each predicted decision is also published over UDP for external monitoring (Section~\ref{sec:realtime_integration}).}
     \label{fig:simulator_screenshot}
 \end{figure}
