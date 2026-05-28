@@ -1,7 +1,7 @@
 \documentclass[sensors,article,submit,pdftex,moreauthors]{Definitions/mdpi}
 %DIF LATEXDIFF DIFFERENCE FILE
 %DIF DEL old.tex   Thu May 28 14:28:56 2026
-%DIF ADD new.tex   Thu May 28 18:17:34 2026
+%DIF ADD new.tex   Thu May 28 18:33:42 2026
 \firstpage{1}
 \makeatletter
 \setcounter{page}{\@firstpage}
@@ -887,7 +887,6 @@ for bimanual manipulation and proved sufficient here.
 \midrule
 \DIFaddFL{Encoder backbone   }& \DIFaddFL{PointPillars vs.\ PointNet++ }& \DIFaddFL{yes }& \DIFaddFL{$2{\times}$ end-to-end throughput }\\
 \DIFaddFL{Predictive eval    }& \DIFaddFL{GT obs.\ vs.\ predicted obs. }& \DIFaddFL{yes }& \DIFaddFL{0.79\,\% accuracy drop, 98.82\,\% agreement }\\
-\DIFaddFL{Component-wise decomp.\ of predictive eval }& \DIFaddFL{D1--D4 (Section~\ref{sec:ablation_decomposition}) }& \DIFaddFL{planned }& \DIFaddFL{per-component accuracy delta, next revision }\\
 \DIFaddFL{Focal-loss recipe  }& \DIFaddFL{focal vs.\ plain CE (early run) }& \DIFaddFL{partial }& \DIFaddFL{lifts minority F1 from $\sim$0 to $\geq 0.65$ }\\
 \DIFaddFL{Chunk size $K$     }& \DIFaddFL{$K{\in}\{1,5,10\}$           }& \DIFaddFL{no (design)  }& \DIFaddFL{$K{=}5$ matches \mbox{%DIFAUXCMD
 \cite{zhao2023act} }\hskip0pt%DIFAUXCMD

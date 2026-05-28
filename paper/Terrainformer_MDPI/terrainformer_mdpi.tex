@@ -736,7 +736,6 @@ Ablation & Variants compared & Empirical? & Effect \\
 \midrule
 Encoder backbone   & PointPillars vs.\ PointNet++ & yes & $2{\times}$ end-to-end throughput \\
 Predictive eval    & GT obs.\ vs.\ predicted obs. & yes & 0.79\,\% accuracy drop, 98.82\,\% agreement \\
-Component-wise decomp.\ of predictive eval & D1--D4 (Section~\ref{sec:ablation_decomposition}) & planned & per-component accuracy delta, next revision \\
 Focal-loss recipe  & focal vs.\ plain CE (early run) & partial & lifts minority F1 from $\sim$0 to $\geq 0.65$ \\
 Chunk size $K$     & $K{\in}\{1,5,10\}$           & no (design)  & $K{=}5$ matches \cite{zhao2023act} default \\
 Goal lookahead $k$ & $k{\in}\{1,5,20\}$           & no (design)  & $k{=}5$ balances pose noise and horizon \\
