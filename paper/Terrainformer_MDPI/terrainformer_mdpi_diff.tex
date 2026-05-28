@@ -1,7 +1,7 @@
 \documentclass[sensors,article,submit,pdftex,moreauthors]{Definitions/mdpi}
 %DIF LATEXDIFF DIFFERENCE FILE
 %DIF DEL old.tex   Thu May 28 14:28:56 2026
-%DIF ADD new.tex   Thu May 28 18:42:19 2026
+%DIF ADD new.tex   Thu May 28 18:44:59 2026
 \firstpage{1}
 \makeatletter
 \setcounter{page}{\@firstpage}
@@ -1030,11 +1030,11 @@ What the present study does not yet show is closed-loop driving competence on a 
 }
 
 \begin{itemize}
-    \item \textbf{\DIFadd{Inertial / sensor-fusion robustness under degraded perception.}} \DIFadd{A deployment-platform study of inertial-fusion reliability, alignment stability, and fault-tolerant initialisation when the primary LiDAR perception is degraded (heavy dust, fog, vegetation occlusion). This study would require a vehicle with a calibrated IMU stack and controlled degradation conditions, and would build on the inertial / star-sensor fusion principles described by Wang et al.~\mbox{%DIFAUXCMD
+    \item \textbf{\DIFadd{Inertial / sensor-fusion robustness under degraded perception.}} \DIFadd{A deployment-platform study of inertial-fusion reliability, alignment stability, and fault-tolerant initialization when the primary LiDAR perception is degraded (heavy dust, fog, vegetation occlusion). This study would require a vehicle with a calibrated IMU stack and controlled degradation conditions, and would build on the inertial / star-sensor fusion principles described by Wang et al.~\mbox{%DIFAUXCMD
 \cite{star_inertial_fusion}}\hskip0pt%DIFAUXCMD
 . The TerrainFormer architecture would consume the fused pose at inference time exactly as it does the LiDAR-derived pose today; the question is how the downstream action stream behaves when the upstream pose source loses its primary sensor.
     }\item \textbf{\DIFadd{Cooperative motion stability and multi-step control analysis.}} \DIFadd{A closed-loop study of cross-track error growth rate, attitude oscillation amplitude, and action-stream cross-correlation under terrain-class boundary events. These metrics are not measurable in the open-loop evaluation reported here because the vehicle's motion is fixed by the recording; they require simulation-in-the-loop or field-deployment apparatus.
-    }\item \textbf{\DIFadd{Sensor-precision and pose-drift impact on decision quality.}} \DIFadd{A controlled noise-injection study where artificial IMU noise (varying densities and ring-pattern artefacts) is added to the goal-direction pose stream, and the resulting decision-stream stability is measured against the noise-free baseline. This study connects high-precision attitude stabilisation to downstream decision robustness.
+    }\item \textbf{\DIFadd{Sensor-precision and pose-drift impact on decision quality.}} \DIFadd{A controlled noise-injection study where artificial IMU noise (varying densities and ring-pattern artefacts) is added to the goal-direction pose stream, and the resulting decision-stream stability is measured against the noise-free baseline. This study connects high-precision attitude stabilization to downstream decision robustness.
     }\item \textbf{\DIFadd{Closed-loop navigation safety and recovery.}} \DIFadd{Four specific experiments deferred to the closed-loop apparatus: (E1) dynamic-obstacle reaction (moving pedestrian / vehicle inserted into the scene, measuring decision-latency and stop-action triggering); (E2) terrain-discontinuity transition (replay across surface-class boundaries, measuring action-stream stability across the transition); (E3) severe sensor-degradation recovery (LiDAR sector mask, point-noise injection at varying densities, measuring traversability-map degradation and downstream action-stream stability); (E4) recovery-after-outage capability (brief sensor outage simulation, measuring time-to-recovery of the decision stream).
 }\end{itemize}
 
