@@ -169,13 +169,9 @@ Fig.~\ref{fig:architecture} gives the high-level dataflow at a glance: a point c
 
 \begin{figure*}[!t]
     \centering
-    % NOTE TO TYPESETTER: please supply a vector (PDF/SVG) version of this figure;
-    % the current raster image becomes blurry at journal print resolution. Increase
-    % all in-figure font sizes to ~9pt minimum so that text remains readable when
-    % the figure is reduced to single-column width.
-    \includegraphics[width=\linewidth]{terrainformer_flowchart.png}
+    \includegraphics[width=\linewidth]{architecture_overview.png}
     \caption{%
-        High-level dataflow of TerrainFormer. A raw LiDAR point cloud (left) passes through the PointPillars encoder to a BEV feature map, which the world model compresses to 64 latent tokens; the decision transformer attends jointly to these tokens, an action-history buffer, and a learnable chunk query, and predicts $K{=}5$ future actions. temporal prediction aggregation (right) averages overlapping chunks for jitter-free outputs. \textbf{Block-internal details are deliberately omitted here} and are shown in expanded views: encoder (Fig.~\ref{fig:encoder_diagram}), world model (Fig.~\ref{fig:world_model_diagram}), and decision transformer (Fig.~\ref{fig:dt_diagram}). Symbol legend: $B$ batch, $N$ points/scan, $H{\times}W{=}256{\times}256$ BEV cells, $d{=}512$ embedding, $K{=}5$ chunk, $A{=}12$ actions.
+        High-level dataflow of TerrainFormer. A raw LiDAR point cloud (left) passes through four stages: the PointPillars encoder produces a $64{\times}256{\times}256$ BEV feature map, the ViT-based world model compresses it to 64 latent tokens $\mathbf{Z}\in\mathbb{R}^{64\times 512}$, the decision transformer produces $(K, 12)$ chunk logits, and TemporalEnsemble aggregates overlapping chunks across the last $K{=}5$ frames into a single discrete action. \textbf{Component internals are deliberately omitted here} and are expanded in Fig.~\ref{fig:encoder_diagram} (encoder), Fig.~\ref{fig:world_model_diagram} (world model), and Fig.~\ref{fig:dt_diagram} (decision transformer). Per-stage latency and parameter counts are annotated below each block; total end-to-end inference is $\sim$20 ms ($\sim$50 FPS) on a Quadro RTX 8000. Bottom braces show the two-phase training schedule: encoder + world model pretrained self-supervised on LidarDustX + GOOSE-3D (Phase 1, blue), then frozen while the decision transformer is trained with behavioral cloning on RELLIS-3D (Phase 2, green).
     }
     \label{fig:architecture}
 \end{figure*}

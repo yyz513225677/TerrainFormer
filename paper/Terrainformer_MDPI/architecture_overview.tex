@@ -1,0 +1,96 @@
+% High-level TerrainFormer dataflow overview for fig:architecture.
+% Deliberately simplified: component internals are shown in Figs 3, 4, 5.
+% Compile: pdflatex architecture_overview.tex
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath,amssymb}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,shapes.geometric,decorations.pathreplacing}
+
+\begin{document}
+\tikzset{
+    stage/.style    ={draw, rounded corners=3pt, minimum height=18mm, minimum width=34mm,
+                      align=center, font=\small\bfseries, fill=white, line width=0.7pt},
+    encoder/.style  ={stage, fill=orange!12, draw=orange!70!black},
+    world/.style    ={stage, fill=blue!12,  draw=blue!65!black},
+    decision/.style ={stage, fill=green!13, draw=green!55!black},
+    ensemble/.style ={stage, fill=red!10,   draw=red!55!black},
+    iolabel/.style  ={font=\small\itshape, align=center, text=gray!25!black},
+    detail/.style   ={font=\scriptsize, text=gray!40!black, align=center},
+    dimlabel/.style    ={font=\scriptsize\ttfamily, text=gray!30!black, align=center},
+    figref/.style   ={font=\scriptsize\itshape, text=blue!55!black, align=center,
+                      draw=blue!55!black, rounded corners=2pt, inner sep=2.5pt,
+                      fill=blue!8, line width=0.5pt},
+    flow/.style     ={-Latex, very thick, draw=gray!35!black},
+    flowlbl/.style  ={midway, font=\scriptsize\itshape, text=gray!35!black,
+                      fill=white, inner sep=1pt},
+    pillar/.style   ={draw=gray!50, fill=white, rounded corners=1pt, minimum width=2mm, minimum height=4mm, inner sep=0},
+}
+
+\begin{tikzpicture}[node distance=12mm and 10mm, every node/.style={font=\small}]
+
+% ============ I/O markers + 4 main stages, left to right ============
+
+% Input: raw LiDAR
+\node[iolabel] (raw) {Raw LiDAR\\point cloud};
+\node[dimlabel, below=2mm of raw] {$(N \le 65{,}536,\,4)$};
+
+% Stage 1: encoder
+\node[encoder, right=of raw] (enc) {PointPillars\\encoder};
+\node[detail, below=2mm of enc] {$\sim$5 ms\\0.15 M params};
+\node[figref, below=11mm of enc] {details: Fig.~3};
+
+% Stage 2: world model
+\node[world, right=of enc] (wm) {World model\\(ViT)};
+\node[detail, below=2mm of wm] {$\sim$10 ms\\47.7 M params};
+\node[figref, below=11mm of wm] {details: Fig.~4};
+
+% Stage 3: decision transformer
+\node[decision, right=of wm] (dt) {Decision\\transformer};
+\node[detail, below=2mm of dt] {$\sim$5 ms\\9.66 M params};
+\node[figref, below=11mm of dt] {details: Fig.~5};
+
+% Stage 4: TemporalEnsemble (inference only)
+\node[ensemble, right=of dt] (te) {Temporal\\Ensemble};
+\node[detail, below=2mm of te] {inference\\$\lambda{=}0.9$, $K{=}5$};
+
+% Output
+\node[iolabel, right=of te] (act) {Action\\(0--11)};
+\node[dimlabel, below=2mm of act] {$\arg\max$ over 12};
+
+% ============ Flow arrows between stages (with intermediate-tensor labels) ============
+\draw[flow] (raw) -- (enc);
+\draw[flow] (enc) -- node[flowlbl, above]{BEV map}
+                       node[flowlbl, below, yshift=-0.3mm]{$(64,256,256)$} (wm);
+\draw[flow] (wm)  -- node[flowlbl, above]{latent tokens}
+                       node[flowlbl, below, yshift=-0.3mm]{$\mathbf{Z}\in\mathbb{R}^{64\times 512}$} (dt);
+\draw[flow] (dt)  -- node[flowlbl, above]{chunk logits}
+                       node[flowlbl, below, yshift=-0.3mm]{$(K, 12)$} (te);
+\draw[flow] (te)  -- (act);
+
+% ============ Training-phase braces under the model ============
+% Use two clearly-separated vertical levels for the brace labels so the
+% Phase 1 label (which spans two stages) cannot collide with Phase 2's.
+% Phase 1 brace: encoder + world model (self-supervised pretrain)
+\coordinate (p1L) at ($(enc.south west)+(0,-23mm)$);
+\coordinate (p1R) at ($(wm.south east)+(0,-23mm)$);
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}, thick, blue!55!black]
+    (p1L) -- (p1R);
+\node[font=\scriptsize\bfseries, text=blue!45!black, align=center]
+    at ($(p1L)!0.5!(p1R)+(0,-5.5mm)$)
+    {Phase 1: self-supervised pretraining\\on LidarDustX + GOOSE-3D};
+
+% Phase 2 brace: decision transformer (behavioral cloning, WM frozen)
+\coordinate (p2L) at ($(dt.south west)+(0,-23mm)$);
+\coordinate (p2R) at ($(dt.south east)+(0,-23mm)$);
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}, thick, green!45!black]
+    (p2L) -- (p2R);
+\node[font=\scriptsize\bfseries, text=green!35!black, align=center]
+    at ($(p2L)!0.5!(p2R)+(0,-5.5mm)$)
+    {Phase 2: BC on RELLIS-3D\\(encoder + WM frozen)};
+
+% ============ Note above title ============
+\node[font=\small\itshape, text=gray!35!black, above=4mm of wm]
+    {End-to-end inference $\sim 20$ ms ($\sim$50 FPS) on a Quadro RTX 8000};
+
+\end{tikzpicture}
+\end{document}

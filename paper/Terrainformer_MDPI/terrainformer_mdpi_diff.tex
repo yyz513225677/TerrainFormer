@@ -1,7 +1,7 @@
 \documentclass[sensors,article,submit,pdftex,moreauthors]{Definitions/mdpi}
 %DIF LATEXDIFF DIFFERENCE FILE
 %DIF DEL old.tex   Thu May 28 14:28:56 2026
-%DIF ADD new.tex   Thu May 28 18:44:59 2026
+%DIF ADD new.tex   Thu May 28 18:50:58 2026
 \firstpage{1}
 \makeatletter
 \setcounter{page}{\@firstpage}
@@ -308,13 +308,16 @@ Fig.~\ref{fig:architecture} gives the high-level dataflow at a glance: a point c
 
 \begin{figure*}[!t]
     \centering
-    % NOTE TO TYPESETTER: please supply a vector (PDF/SVG) version of this figure;
-    % the current raster image becomes blurry at journal print resolution. Increase
-    % all in-figure font sizes to ~9pt minimum so that text remains readable when
-    % the figure is reduced to single-column width.
-    \includegraphics[width=\linewidth]{terrainformer_flowchart.png}
-    \caption{%
-        High-level dataflow of TerrainFormer. A raw LiDAR point cloud (left) passes through the PointPillars encoder to a BEV feature map, which the world model compresses to 64 latent tokens; the decision transformer attends jointly to these tokens, an action-history buffer, and a learnable chunk query, and predicts $K{=}5$ future actions. \DIFdelbeginFL \DIFdelFL{TemporalEnsemble }\DIFdelendFL \DIFaddbeginFL \DIFaddFL{temporal prediction aggregation }\DIFaddendFL (right) averages overlapping chunks for jitter-free outputs. \textbf{Block-internal details are deliberately omitted here} and are shown in expanded views: encoder (Fig.~\ref{fig:encoder_diagram}), world model (Fig.~\ref{fig:world_model_diagram}), and decision transformer (Fig.~\ref{fig:dt_diagram}). Symbol legend: $B$ batch, $N$ points/scan, $H{\times}W{=}256{\times}256$ BEV cells, $d{=}512$ embedding, $K{=}5$ chunk, $A{=}12$ actions.
+    %DIF <  NOTE TO TYPESETTER: please supply a vector (PDF/SVG) version of this figure;
+    %DIF <  the current raster image becomes blurry at journal print resolution. Increase
+    %DIF <  all in-figure font sizes to ~9pt minimum so that text remains readable when
+    %DIF <  the figure is reduced to single-column width.
+    \DIFdelbeginFL %DIFDELCMD < \includegraphics[width=\linewidth]{terrainformer_flowchart.png}
+%DIFDELCMD <     %%%
+\DIFdelendFL \DIFaddbeginFL \includegraphics[width=\linewidth]{architecture_overview.png}
+    \DIFaddendFL \caption{%
+        High-level dataflow of TerrainFormer. A raw LiDAR point cloud (left) passes through \DIFaddbeginFL \DIFaddFL{four stages: }\DIFaddendFL the PointPillars encoder \DIFdelbeginFL \DIFdelFL{to }\DIFdelendFL \DIFaddbeginFL \DIFaddFL{produces }\DIFaddendFL a \DIFaddbeginFL \DIFaddFL{$64{\times}256{\times}256$ }\DIFaddendFL BEV feature map, \DIFdelbeginFL \DIFdelFL{which }\DIFdelendFL the \DIFaddbeginFL \DIFaddFL{ViT-based }\DIFaddendFL world model compresses \DIFaddbeginFL \DIFaddFL{it }\DIFaddendFL to 64 latent tokens \DIFdelbeginFL \DIFdelFL{; }\DIFdelendFL \DIFaddbeginFL \DIFaddFL{$\mathbf{Z}\in\mathbb{R}^{64\times 512}$, }\DIFaddendFL the decision transformer \DIFdelbeginFL \DIFdelFL{attends jointly to these tokens, an action-history buffer, and a learnable }\DIFdelendFL \DIFaddbeginFL \DIFaddFL{produces $(K, 12)$ }\DIFaddendFL chunk \DIFdelbeginFL \DIFdelFL{query}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{logits}\DIFaddendFL , and \DIFdelbeginFL \DIFdelFL{predicts $K{=}5$ future actions. }\DIFdelendFL TemporalEnsemble \DIFdelbeginFL \DIFdelFL{(right) averages }\DIFdelendFL \DIFaddbeginFL \DIFaddFL{aggregates }\DIFaddendFL overlapping chunks \DIFdelbeginFL \DIFdelFL{for jitter-free outputs}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{across the last $K{=}5$ frames into a single discrete action}\DIFaddendFL . \DIFdelbeginFL \textbf{\DIFdelFL{Block-internal details are deliberately omitted here}} %DIFAUXCMD
+\DIFdelendFL \DIFaddbeginFL \textbf{\DIFaddFL{Component internals are deliberately omitted here}} \DIFaddendFL and are \DIFdelbeginFL \DIFdelFL{shown in }\DIFdelendFL expanded \DIFdelbeginFL \DIFdelFL{views: encoder (}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{in }\DIFaddendFL Fig.~\ref{fig:encoder_diagram} \DIFaddbeginFL \DIFaddFL{(encoder}\DIFaddendFL ), \DIFdelbeginFL \DIFdelFL{world model (}\DIFdelendFL Fig.~\ref{fig:world_model_diagram} \DIFaddbeginFL \DIFaddFL{(world model}\DIFaddendFL ), and \DIFdelbeginFL \DIFdelFL{decision transformer (}\DIFdelendFL Fig.~\ref{fig:dt_diagram} \DIFaddbeginFL \DIFaddFL{(decision transformer}\DIFaddendFL ). \DIFdelbeginFL \DIFdelFL{Symbol legend}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{Per-stage latency and parameter counts are annotated below each block; total end-to-end inference is $\sim$20 ms ($\sim$50 FPS) on a Quadro RTX 8000. Bottom braces show the two-phase training schedule}\DIFaddendFL : \DIFdelbeginFL \DIFdelFL{$B$ batch}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{encoder + world model pretrained self-supervised on LidarDustX + GOOSE-3D (Phase 1}\DIFaddendFL , \DIFdelbeginFL \DIFdelFL{$N$ points/scan}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{blue)}\DIFaddendFL , \DIFdelbeginFL \DIFdelFL{$H{\times}W{=}256{\times}256$ BEV cells}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{then frozen while the decision transformer is trained with behavioral cloning on RELLIS-3D (Phase 2}\DIFaddendFL , \DIFdelbeginFL \DIFdelFL{$d{=}512$ embedding, $K{=}5$ chunk, $A{=}12$ actions}\DIFdelendFL \DIFaddbeginFL \DIFaddFL{green)}\DIFaddendFL .
     }
     \label{fig:architecture}
 \end{figure*}
