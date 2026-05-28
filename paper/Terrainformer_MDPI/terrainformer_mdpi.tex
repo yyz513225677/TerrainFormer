@@ -112,32 +112,51 @@ The four lines of work surveyed above are not independent; in practice they form
     \label{fig:tech_tree}
 \end{figure}
 
-Table~\ref{tab:method_comparison} compares TerrainFormer against representative systems on the architectural and methodological axes that drive their performance differences. The point of the table is not to claim TerrainFormer is uniformly better; several of the listed systems were designed for urban driving rather than off-road and use different action representations, sensor stacks, or training datasets. What the table does show is which design choices are shared, which are specific to TerrainFormer, and where each design choice comes from in the literature.
+Tables~\ref{tab:method_arch} and~\ref{tab:method_caps} compare TerrainFormer against representative systems on the architectural and methodological axes that drive their performance differences. Table~\ref{tab:method_arch} reports the architectural backbones (domain, perception, policy); Table~\ref{tab:method_caps} reports the deployment-relevant capabilities (action representation, cross-dataset training, real-time inference). The point of the comparison is not to claim TerrainFormer is uniformly better; several of the listed systems were designed for urban driving rather than off-road and use different action representations, sensor stacks, or training datasets. What the tables do show is which design choices are shared, which are specific to TerrainFormer, and where each design choice comes from in the literature.
 
-\begin{table*}[!t]
-\caption{Methodological comparison: TerrainFormer vs.\ representative systems. Columns capture the architectural and training-protocol choices that explain performance differences. ``WM'' = world model with latent dynamics; ``DT'' = decision transformer (transformer-based sequence policy); ``E2E'' = direct sensors-to-action backbone without an intermediate latent.}
-\label{tab:method_comparison}
+\begin{table}[h]
+\caption{Methodological comparison, Part 1 of 2: architectural backbones. ``WM'' = world model with latent dynamics; ``DT'' = decision transformer (transformer-based sequence policy); ``E2E'' = direct sensors-to-action backbone without an intermediate latent.}
+\label{tab:method_arch}
 \centering
 \footnotesize
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccc}
 \toprule
-System & Domain & Perception & Policy & Action repr. & Cross-dataset & Real-time \\
+System & Domain & Perception & Policy \\
 \midrule
-BADGR \cite{kahn2021}              & off-road  & RGB+IMU CNN          & E2E MLP        & continuous      & ---       & yes (10\,Hz) \\
-TartanDrive \cite{triest2023}      & off-road  & LiDAR+RGB+IMU        & E2E MLP        & continuous      & ---       & yes (10\,Hz) \\
-Dreamer / DreamerV3 \cite{hafner2020,hafner2023} & continuous control & RGB CNN        & WM imagination & continuous      & no        & no (planning) \\
-MILE \cite{hu2022}                 & urban     & camera $\to$ BEV     & WM + planner   & continuous traj.& no        & near (CARLA) \\
-PCWM \cite{yang2023}               & urban     & LiDAR point clouds   & WM             & ---             & no        & no \\
-Decision Transformer \cite{chen2021}& offline RL& state vector         & DT             & discrete        & ---       & yes \\
-Wayformer \cite{nayakanti2023}     & urban     & multi-modal BEV      & transformer    & continuous traj.& no        & yes \\
-\textbf{TerrainFormer (ours)}      & \textbf{off-road} & \textbf{LiDAR $\to$ BEV (PointPillars)} & \textbf{WM + DT} & \textbf{discrete (12 actions)} & \textbf{yes} & \textbf{yes ($\sim$50\,FPS)} \\
+BADGR \cite{kahn2021}              & off-road  & RGB+IMU CNN          & E2E MLP        \\
+TartanDrive \cite{triest2023}      & off-road  & LiDAR+RGB+IMU        & E2E MLP        \\
+Dreamer / DreamerV3 \cite{hafner2020,hafner2023} & cont.\ control & RGB CNN        & WM imagination \\
+MILE \cite{hu2022}                 & urban     & camera $\to$ BEV     & WM + planner   \\
+PCWM \cite{yang2023}               & urban     & LiDAR point clouds   & WM             \\
+Decision Transformer \cite{chen2021}& offline RL& state vector         & DT             \\
+Wayformer \cite{nayakanti2023}     & urban     & multi-modal BEV      & transformer    \\
+\textbf{TerrainFormer (ours)}      & \textbf{off-road} & \textbf{LiDAR $\to$ BEV (PointPillars)} & \textbf{WM + DT} \\
 \bottomrule
 \end{tabular}
-\smallskip
-\parbox{\textwidth}{\footnotesize ``Cross-dataset'' = the perception backbone is pretrained on datasets disjoint from the policy-training set. ``Real-time'' = end-to-end inference $\geq 10$\,FPS on a single GPU at the system's stated input size.}
-\end{table*}
+\end{table}
 
-Three rows of Table~\ref{tab:method_comparison} are worth picking out. (i) BADGR \cite{kahn2021} and TartanDrive \cite{triest2023} are the closest off-road comparators, both end-to-end. Neither separates terrain representation from action selection, so the perception layer cannot be evaluated independently or transferred. TerrainFormer's two-phase split is what makes the cross-dataset measurement in Section~\ref{sec:results} possible at all. (ii) MILE \cite{hu2022} and PCWM \cite{yang2023} bring world-model machinery to urban driving with the same BEV-then-transformer pattern we use, but they consume a single urban dataset and output continuous trajectories. The architectural lineage is real but the off-road action vocabulary and cross-dataset protocol are new here. (iii) The original Decision Transformer \cite{chen2021} treats policy learning as autoregressive sequence modelling but operates on state vectors, not perception. Pairing it with a BEV world model is the architectural step that turns it into a perception-aware policy.
+\begin{table}[h]
+\caption{Methodological comparison, Part 2 of 2: deployment-relevant capabilities. ``Cross-dataset'' = perception backbone is pretrained on data disjoint from the policy-training set. ``Real-time'' = end-to-end inference $\geq 10$\,FPS on a single GPU at the system's stated input size.}
+\label{tab:method_caps}
+\centering
+\footnotesize
+\begin{tabular}{lccc}
+\toprule
+System & Action repr. & Cross-dataset & Real-time \\
+\midrule
+BADGR \cite{kahn2021}              & continuous       & ---  & yes (10\,Hz) \\
+TartanDrive \cite{triest2023}      & continuous       & ---  & yes (10\,Hz) \\
+Dreamer / DreamerV3 \cite{hafner2020,hafner2023} & continuous & no   & no (planning) \\
+MILE \cite{hu2022}                 & continuous traj. & no   & near (CARLA) \\
+PCWM \cite{yang2023}               & ---              & no   & no \\
+Decision Transformer \cite{chen2021}& discrete        & ---  & yes \\
+Wayformer \cite{nayakanti2023}     & continuous traj. & no   & yes \\
+\textbf{TerrainFormer (ours)}      & \textbf{discrete (12 actions)} & \textbf{yes} & \textbf{yes ($\sim$50\,FPS)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three rows of Tables~\ref{tab:method_arch} and~\ref{tab:method_caps} are worth picking out. (i) BADGR \cite{kahn2021} and TartanDrive \cite{triest2023} are the closest off-road comparators, both end-to-end. Neither separates terrain representation from action selection, so the perception layer cannot be evaluated independently or transferred. TerrainFormer's two-phase split is what makes the cross-dataset measurement in Section~\ref{sec:results} possible at all. (ii) MILE \cite{hu2022} and PCWM \cite{yang2023} bring world-model machinery to urban driving with the same BEV-then-transformer pattern we use, but they consume a single urban dataset and output continuous trajectories. The architectural lineage is real but the off-road action vocabulary and cross-dataset protocol are new here. (iii) The original Decision Transformer \cite{chen2021} treats policy learning as autoregressive sequence modelling but operates on state vectors, not perception. Pairing it with a BEV world model is the architectural step that turns it into a perception-aware policy.
 
 % ============================================================
 \section{Methodology}
