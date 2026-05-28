@@ -10,7 +10,7 @@ Thank you for the constructive review and for pointing out three concrete additi
 |---|---|
 | Does the introduction provide sufficient background and include all relevant references? | Now improved → the new Section 2.5 ("Position of TerrainFormer in the Literature") and its accompanying technology-tree figure (Fig.\ 2) make the relationship between TerrainFormer and four lines of prior work (classical / DL-perception / end-to-end IL / world-model + sequence policy) explicit. |
 | Are all the cited references relevant to the research? | Yes — the same Section 2.5 also threads the cited references into the taxonomy so the reader can see which prior work each branch of the tree corresponds to. |
-| Is the research design appropriate? | Yes — the methodological comparison table (Table 2) now makes the design choices explicit relative to seven representative comparator systems, allowing reviewers to judge each choice in context. |
+| Is the research design appropriate? | Yes — the methodological comparison tables (Tables 1 and 2) now make the design choices explicit relative to seven representative comparator systems, allowing reviewers to judge each choice in context. |
 | Are the methods adequately described? | Yes, and further improved → the new Ablation Studies section (Section 6) consolidates the encoder choice, predictive evaluation, focal-loss recipe, action-chunk size, and goal-direction lookahead into one labelled location with explicit empirical/design-rationale tagging. |
 | Are the results clearly presented? | Yes, with the addition that the ablation-style content (PointPillars vs.\ PointNet++ table, predictive evaluation table, focal-loss discussion) is now both indexable from one dedicated section and referenced back from its original analysis context. |
 | Are the conclusions supported by the results? | Yes — the Ablation Studies section's summary table (Table 9) explicitly flags which design choices are supported by empirical measurement and which are reported as design rationale, so the strength of evidence behind each claim is readable from one place. |
@@ -21,7 +21,7 @@ Thank you for the constructive review and for pointing out three concrete additi
 
 > "Please expand the current evaluation beyond simple performance metrics. Include a methodological comparison table that explicitly outlines the underlying architectural or algorithmic origins of these performance differences which can be referenced by readers."
 
-**Response 1:** Agreed. We have added Table 2 (`tab:method_comparison`) at the end of Related Work (new Section 2.5 "Position of TerrainFormer in the Literature"). The table compares TerrainFormer against seven representative systems on six methodological axes: domain (off-road / urban / continuous control / offline RL), perception backbone, policy backbone, action representation (discrete vs.\ continuous), cross-dataset training protocol, and real-time capability. The compared systems are BADGR \cite{kahn2021}, TartanDrive \cite{triest2023}, Dreamer / DreamerV3 \cite{hafner2020, hafner2023}, MILE \cite{hu2022}, PCWM \cite{yang2023}, the original Decision Transformer \cite{chen2021}, and Wayformer \cite{nayakanti2023}.
+**Response 1:** Agreed. We have added two methodological comparison tables (Tables 1 and 2, labels `tab:method_arch` and `tab:method_caps`) at the end of Related Work (new Section 2.5 "Position of TerrainFormer in the Literature"). The split into two tables is deliberate so that each table fits inside the MDPI single-column page width: Table 1 reports the architectural backbones (domain, perception, policy) and Table 2 reports the deployment-relevant capabilities (action representation, cross-dataset training, real-time inference). Together they cover six methodological axes across seven representative comparator systems: BADGR \cite{kahn2021}, TartanDrive \cite{triest2023}, Dreamer / DreamerV3 \cite{hafner2020, hafner2023}, MILE \cite{hu2022}, PCWM \cite{yang2023}, the original Decision Transformer \cite{chen2021}, and Wayformer \cite{nayakanti2023}. The System column repeats across the two tables and serves as the linking key so a reader can correlate rows between them.
 
 After the table, three explanatory paragraphs unpack the architectural sources of the performance differences:
 
@@ -31,13 +31,13 @@ After the table, three explanatory paragraphs unpack the architectural sources o
 
 Inserted text (Section 2.5, end of Related Work):
 
-> "Table 2 compares TerrainFormer against representative systems on the architectural and methodological axes that drive their performance differences. The point of the table is not to claim TerrainFormer is uniformly better; several of the listed systems were designed for urban driving rather than off-road and use different action representations, sensor stacks, or training datasets. What the table does show is which design choices are shared, which are specific to TerrainFormer, and where each design choice comes from in the literature."
+> "Tables 1 and 2 compare TerrainFormer against representative systems on the architectural and methodological axes that drive their performance differences. Table 1 reports the architectural backbones (domain, perception, policy); Table 2 reports the deployment-relevant capabilities (action representation, cross-dataset training, real-time inference). The point of the comparison is not to claim TerrainFormer is uniformly better; several of the listed systems were designed for urban driving rather than off-road and use different action representations, sensor stacks, or training datasets. What the tables do show is which design choices are shared, which are specific to TerrainFormer, and where each design choice comes from in the literature."
 
 ### Comments 2: Technology Tree
 
 > "Provide a technology tree or taxonomy of related work to clearly illustrate where 'this research' fits within the broader literature."
 
-**Response 2:** Agreed. We have added Figure 2 (`fig:tech_tree`) in the same new Section 2.5. The figure is a four-branch taxonomy:
+**Response 2:** Agreed. We have added Figure 1 (`fig:tech_tree`) in the same new Section 2.5. The figure is now the first figure of the manuscript because Section 2.5 precedes the architecture overview; the four-branch taxonomy is:
 
 - **Classical / geometric** — \cite{papadakis2013, sock2016}
 - **Deep-learning perception** — semantic segmentation \cite{jiang2021, wigness2019} and traversability \cite{wellhausen2019, frey2023, castro2023, frey2024}
@@ -56,8 +56,8 @@ The figure file is the vector PDF `tech_tree.pdf` compiled from `tech_tree.tex` 
 
 Section structure:
 
-- **6.1 Encoder backbone (PointPillars vs.\ PointNet++)**: *empirical*. References Table 1 from Section 3.1.2 and unpacks the three architectural factors (memory layout / hierarchy depth / output-format alignment) that explain the latency gap.
-- **6.2 Predictive evaluation (ground-truth vs.\ predicted observations)**: *empirical*. References Table 6 from Section 5.4; the 0.79\,\% accuracy drop with 98.82\,\% agreement is the load-bearing empirical ablation showing that the decision transformer reads its action signal from the learned latent terrain representation, not from short-term sensor noise.
+- **6.1 Encoder backbone (PointPillars vs.\ PointNet++)**: *empirical*. References Table 3 from Section 3.1.2 and unpacks the three architectural factors (memory layout / hierarchy depth / output-format alignment) that explain the latency gap.
+- **6.2 Predictive evaluation (ground-truth vs.\ predicted observations)**: *empirical*. References Table 8 from Section 5.4; the 0.79\,\% accuracy drop with 98.82\,\% agreement is the load-bearing empirical ablation showing that the decision transformer reads its action signal from the learned latent terrain representation, not from short-term sensor noise.
 - **6.3 Focal loss with inverse-frequency class weighting**: *partially empirical*. We ran one CE-only Phase 2 training run during early development and observed near-zero recall on every minority class with accuracy in the 60--65\,\% range. Switching to focal loss with automatic inverse-frequency weights ($\gamma{=}2.0$, label smoothing $0.1$) is what lifts every per-class F1 above 0.65.
 - **6.4 Action-chunk size $K$**: *design rationale*. We use $K{=}5$ matching the original action-chunking paper~\cite{zhao2023act}. The two failure modes at the extremes ($K$ too small loses look-ahead, $K$ too large amplifies prediction error) are described.
 - **6.5 Goal-direction lookahead $k$**: *design rationale*. We use $k{=}5$ to match the chunk-prediction horizon. The two failure modes ($k{=}1$ becomes pose noise, $k{=}20$ becomes uncorrelated with the current step) are described.
