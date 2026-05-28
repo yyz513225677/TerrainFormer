@@ -1,7 +1,7 @@
 \documentclass[sensors,article,submit,pdftex,moreauthors]{Definitions/mdpi}
 %DIF LATEXDIFF DIFFERENCE FILE
 %DIF DEL old.tex   Thu May 28 14:28:56 2026
-%DIF ADD new.tex   Thu May 28 18:11:48 2026
+%DIF ADD new.tex   Thu May 28 18:17:34 2026
 \firstpage{1}
 \makeatletter
 \setcounter{page}{\@firstpage}
@@ -1008,7 +1008,7 @@ The PointPillars encoder (${\sim}5$\,ms, ${\sim}200$\,FPS) provides $20\times$ h
 The total model comprises 57.36M parameters (47.70M world model + 9.66M decision transformer). The PointPillars encoder contributes only 0.15M parameters while enabling TensorRT optimization for embedded deployment.
 
 % ============================================================
-\section{Conclusions}
+\section{\DIFdelbegin \DIFdel{Conclusions}\DIFdelend \DIFaddbegin \DIFadd{Conclusion and Future Works}\DIFaddend }
 \label{sec:conclusion}
 % ============================================================
 
@@ -1020,7 +1020,25 @@ The cross-dataset training paradigm is the load-bearing claim of the paper. The 
 
 What the present study does not yet show is closed-loop driving competence on a physical Warthog. The simulation-based evaluation in Section~\ref{sec:limitations} is open-loop: the vehicle's actual motion is fixed by the recording, so compounding error from autonomous action selection is not measurable here. We have built the UDP decision-publishing interface that field deployment will use; the next milestone is wiring it into a real robot and reporting traversal-level metrics.
 
-\section*{Acknowledgments}
+\DIFaddbegin \subsection{\DIFadd{Future Works}}
+\label{sec:future_works}
+
+\DIFadd{Beyond the closed-loop field deployment outlined above, four further directions are explicitly outside the scope of the present learning-architecture paper but follow directly from reviewer feedback during preparation:
+}
+
+\begin{itemize}
+    \item \textbf{\DIFadd{Inertial / sensor-fusion robustness under degraded perception.}} \DIFadd{A deployment-platform study of inertial-fusion reliability, alignment stability, and fault-tolerant initialisation when the primary LiDAR perception is degraded (heavy dust, fog, vegetation occlusion). This study would require a vehicle with a calibrated IMU stack and controlled degradation conditions, and would build on the inertial / star-sensor fusion principles described by Wang et al.~\mbox{%DIFAUXCMD
+\cite{star_inertial_fusion}}\hskip0pt%DIFAUXCMD
+. The TerrainFormer architecture would consume the fused pose at inference time exactly as it does the LiDAR-derived pose today; the question is how the downstream action stream behaves when the upstream pose source loses its primary sensor.
+    }\item \textbf{\DIFadd{Cooperative motion stability and multi-step control analysis.}} \DIFadd{A closed-loop study of cross-track error growth rate, attitude oscillation amplitude, and action-stream cross-correlation under terrain-class boundary events. These metrics are not measurable in the open-loop evaluation reported here because the vehicle's motion is fixed by the recording; they require simulation-in-the-loop or field-deployment apparatus.
+    }\item \textbf{\DIFadd{Sensor-precision and pose-drift impact on decision quality.}} \DIFadd{A controlled noise-injection study where artificial IMU noise (varying densities and ring-pattern artefacts) is added to the goal-direction pose stream, and the resulting decision-stream stability is measured against the noise-free baseline. This study connects high-precision attitude stabilisation to downstream decision robustness.
+    }\item \textbf{\DIFadd{Closed-loop navigation safety and recovery.}} \DIFadd{Four specific experiments deferred to the closed-loop apparatus: (E1) dynamic-obstacle reaction (moving pedestrian / vehicle inserted into the scene, measuring decision-latency and stop-action triggering); (E2) terrain-discontinuity transition (replay across surface-class boundaries, measuring action-stream stability across the transition); (E3) severe sensor-degradation recovery (LiDAR sector mask, point-noise injection at varying densities, measuring traversability-map degradation and downstream action-stream stability); (E4) recovery-after-outage capability (brief sensor outage simulation, measuring time-to-recovery of the decision stream).
+}\end{itemize}
+
+\DIFadd{These four directions are listed together because they share the same dependency: a closed-loop deployment apparatus (Gazebo / Isaac Sim with a Warthog model for the first three, plus instrumented field deployment for the last). The next-revision component-wise decomposition study described in Section~\ref{sec:ablation_decomposition} is a prerequisite to any of these, because the component contributions to cross-dataset generalisation must be quantified before the closed-loop robustness experiments are useful.
+}
+
+\DIFaddend \section*{Acknowledgments}
 The authors acknowledge the RELLIS-3D \cite{jiang2021}, LidarDustX \cite{lidardust}, and GOOSE-3D \cite{goose2024} dataset teams for making their data publicly available.
 
 % ============================================================
@@ -1139,6 +1157,12 @@ P.~Mortimer \textit{et al.}, ``GOOSE: A 3D dataset for outdoor semantic segmenta
 
 \bibitem{zhao2023act}
 T.~Z. Zhao, V.~Kumar, S.~Levine, and C.~Finn, ``Learning fine-grained bimanual manipulation with low-cost hardware,'' in \textit{Proc. Robotics: Science and Systems (RSS)}, 2023.
+\DIFaddbegin 
+
+\bibitem{star_inertial_fusion}
+%DIF >  TODO: replace with the full bibliographic record (authors, journal, volume, year)
+\DIFadd{``Enhancing attitude availability in star-depleted cases: an inertial/star sensor fusion method,'' }[\DIFadd{Online}]\DIFadd{.
+}\DIFaddend 
 
 \end{thebibliography}
 \end{document}
