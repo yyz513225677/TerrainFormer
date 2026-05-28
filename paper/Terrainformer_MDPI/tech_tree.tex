@@ -1,0 +1,75 @@
+% Technology tree / taxonomy of related work for TerrainFormer paper.
+% Compile: pdflatex tech_tree.tex
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,shapes.geometric,trees}
+
+\begin{document}
+\tikzset{
+    root/.style    ={draw, rounded corners=3pt, minimum height=8mm, minimum width=46mm, align=center, font=\small\bfseries, fill=blue!8, draw=blue!60},
+    branch/.style  ={draw, rounded corners=2pt, minimum height=7mm, minimum width=38mm, align=center, font=\small\bfseries, fill=gray!8, draw=gray!50!black},
+    leaf/.style    ={draw, rounded corners=2pt, minimum height=6mm, minimum width=42mm, align=center, font=\scriptsize, fill=white, draw=gray!60},
+    ours/.style    ={leaf, fill=red!10, draw=red!60, font=\scriptsize\bfseries, minimum height=8mm},
+    cite/.style    ={font=\scriptsize\itshape, text=gray!55!black},
+    edge/.style    ={-Latex, thick, gray!60!black, rounded corners=2pt},
+}
+
+\begin{tikzpicture}[node distance=4mm and 6mm, every node/.style={font=\small}]
+
+% ============== ROOT ==============
+\node[root] (root) {Off-road autonomous navigation};
+
+% ============== BRANCHES (4) ==============
+\node[branch, below left=14mm and 22mm of root] (classical) {Classical / geometric};
+\node[branch, below=14mm of root, xshift=-22mm] (dlperc) {Deep-learning perception};
+\node[branch, below=14mm of root, xshift=22mm] (e2e) {End-to-end imitation learning};
+\node[branch, below right=14mm and 22mm of root] (wm) {World-model + sequence policy};
+
+\draw[edge] (root) -- (classical);
+\draw[edge] (root) -- (dlperc);
+\draw[edge] (root) -- (e2e);
+\draw[edge] (root) -- (wm);
+
+% ============== LEAVES under each branch ==============
+% Classical
+\node[leaf, below=of classical, yshift=-2mm] (c1) {Geometric features\\\cite{papadakis2013}};
+\node[leaf, below=of c1] (c2) {Probabilistic costmap\\\cite{sock2016}};
+\draw[edge] (classical) -- (c1);
+\draw[edge] (c1) -- (c2);
+
+% DL perception
+\node[leaf, below=of dlperc, yshift=-2mm] (p1) {Semantic seg.\\RELLIS-3D \cite{jiang2021}, RUGD \cite{wigness2019}};
+\node[leaf, below=of p1] (p2) {Traversability\\\cite{wellhausen2019, frey2023, castro2023, frey2024}};
+\draw[edge] (dlperc) -- (p1);
+\draw[edge] (p1) -- (p2);
+
+% End-to-end IL
+\node[leaf, below=of e2e, yshift=-2mm] (e1) {RGB BC\\\cite{bojarski2016, codevilla2018}};
+\node[leaf, below=of e1] (e2) {LiDAR BC \\BADGR \cite{kahn2021}, TartanDrive \cite{triest2023}};
+\draw[edge] (e2e) -- (e1);
+\draw[edge] (e1) -- (e2);
+
+% World model + sequence policy (our branch)
+\node[leaf, below=of wm, yshift=-2mm] (w1) {Latent dynamics\\Dreamer \cite{hafner2020,hafner2023}};
+\node[leaf, below=of w1] (w2) {BEV world models\\MILE \cite{hu2022}, PCWM \cite{yang2023}};
+\node[leaf, below=of w2] (w3) {Decision transformers\\\cite{chen2021, zheng2022, janner2021}};
+\node[ours, below=of w3] (wo) {\textbf{TerrainFormer}\\(this work)};
+\draw[edge] (wm) -- (w1);
+\draw[edge] (w1) -- (w2);
+\draw[edge] (w2) -- (w3);
+\draw[edge] (w3) -- (wo);
+
+% Cross-cutting arrow from BEV world models + DTs to ours (showing inheritance)
+\draw[edge, dashed, draw=red!60, -Latex, thick] (w2.east) .. controls +(15mm,0) and +(15mm,5mm) .. (wo.east);
+\draw[edge, dashed, draw=red!60, -Latex, thick] (w3.east) .. controls +(10mm,0) and +(10mm,5mm) .. (wo.east);
+
+% Cross-cutting: terrain perception heads inside our world model
+\draw[edge, dashed, draw=red!60, -Latex, thick] (p2.east) -- (wo.west);
+
+% Footer note
+\node[font=\scriptsize\itshape, text=gray!55!black, below=10mm of wo, align=center]
+    {Dashed red arrows: building blocks reused by TerrainFormer.\\Solid arrows: parent-child taxonomy.};
+
+\end{tikzpicture}
+\end{document}

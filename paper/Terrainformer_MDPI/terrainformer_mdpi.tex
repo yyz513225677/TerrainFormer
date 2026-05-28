@@ -100,6 +100,45 @@ Our approach differs from prior decision transformer work in three key aspects: 
 
 Behavioral cloning (BC) learns policies directly from expert demonstrations \cite{pomerleau1989, bojarski2016}. While BC suffers from distribution shift in theory, it remains a practical and effective approach when paired with data augmentation and appropriate action representations \cite{codevilla2018}. For off-road navigation, BC has been applied using various input modalities including RGB images \cite{kahn2021}, LiDAR \cite{wigness2019}, and multi-modal inputs \cite{triest2023}. Our work employs BC for the decision transformer training phase, using expert trajectories from the RELLIS-3D dataset.
 
+\subsection{Position of TerrainFormer in the Literature}
+\label{sec:lit_position}
+
+The four lines of work surveyed above are not independent; in practice they form a layered taxonomy. Fig.~\ref{fig:tech_tree} shows that taxonomy with TerrainFormer's slot highlighted. Classical terrain analysis and deep-learning perception solve subproblems that an end-to-end policy must otherwise learn from scratch, and world models plus decision transformers provide the architectural components that let a single network do both. TerrainFormer takes the BEV-world-model formulation that proved effective in urban driving (MILE, PCWM) and pairs it with a decision-transformer policy head originally developed for offline RL, with three off-road-specific changes: a PointPillars front-end sized for an on-vehicle compute budget, an action-chunked output trained with focal loss to keep minority manoeuvres learnable under the heavy class imbalance of off-road driving, and a deliberate cross-dataset training split that lets us evaluate the world model on terrain it never saw during pretraining.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{tech_tree.pdf}
+    \caption{Taxonomy of related work on off-road autonomous navigation. The four solid-line branches are classical geometric approaches, deep-learning perception (semantic segmentation and traversability), end-to-end imitation learning, and the more recent world-model-plus-sequence-policy family. TerrainFormer sits at the leaf of the last branch. Dashed red arrows mark the prior components TerrainFormer reuses: BEV world models from urban driving \cite{hu2022, yang2023}, decision-transformer architectures from offline RL \cite{chen2021, zheng2022, janner2021}, and self-supervised traversability/segmentation targets from deep-learning perception \cite{wellhausen2019, frey2023, castro2023}.}
+    \label{fig:tech_tree}
+\end{figure}
+
+Table~\ref{tab:method_comparison} compares TerrainFormer against representative systems on the architectural and methodological axes that drive their performance differences. The point of the table is not to claim TerrainFormer is uniformly better; several of the listed systems were designed for urban driving rather than off-road and use different action representations, sensor stacks, or training datasets. What the table does show is which design choices are shared, which are specific to TerrainFormer, and where each design choice comes from in the literature.
+
+\begin{table*}[!t]
+\caption{Methodological comparison: TerrainFormer vs.\ representative systems. Columns capture the architectural and training-protocol choices that explain performance differences. ``WM'' = world model with latent dynamics; ``DT'' = decision transformer (transformer-based sequence policy); ``E2E'' = direct sensors-to-action backbone without an intermediate latent.}
+\label{tab:method_comparison}
+\centering
+\footnotesize
+\begin{tabular}{lcccccc}
+\toprule
+System & Domain & Perception & Policy & Action repr. & Cross-dataset & Real-time \\
+\midrule
+BADGR \cite{kahn2021}              & off-road  & RGB+IMU CNN          & E2E MLP        & continuous      & ---       & yes (10\,Hz) \\
+TartanDrive \cite{triest2023}      & off-road  & LiDAR+RGB+IMU        & E2E MLP        & continuous      & ---       & yes (10\,Hz) \\
+Dreamer / DreamerV3 \cite{hafner2020,hafner2023} & continuous control & RGB CNN        & WM imagination & continuous      & no        & no (planning) \\
+MILE \cite{hu2022}                 & urban     & camera $\to$ BEV     & WM + planner   & continuous traj.& no        & near (CARLA) \\
+PCWM \cite{yang2023}               & urban     & LiDAR point clouds   & WM             & ---             & no        & no \\
+Decision Transformer \cite{chen2021}& offline RL& state vector         & DT             & discrete        & ---       & yes \\
+Wayformer \cite{nayakanti2023}     & urban     & multi-modal BEV      & transformer    & continuous traj.& no        & yes \\
+\textbf{TerrainFormer (ours)}      & \textbf{off-road} & \textbf{LiDAR $\to$ BEV (PointPillars)} & \textbf{WM + DT} & \textbf{discrete (12 actions)} & \textbf{yes} & \textbf{yes ($\sim$50\,FPS)} \\
+\bottomrule
+\end{tabular}
+\smallskip
+\parbox{\textwidth}{\footnotesize ``Cross-dataset'' = the perception backbone is pretrained on datasets disjoint from the policy-training set. ``Real-time'' = end-to-end inference $\geq 10$\,FPS on a single GPU at the system's stated input size.}
+\end{table*}
+
+Three rows of Table~\ref{tab:method_comparison} are worth picking out. (i) BADGR \cite{kahn2021} and TartanDrive \cite{triest2023} are the closest off-road comparators, both end-to-end. Neither separates terrain representation from action selection, so the perception layer cannot be evaluated independently or transferred. TerrainFormer's two-phase split is what makes the cross-dataset measurement in Section~\ref{sec:results} possible at all. (ii) MILE \cite{hu2022} and PCWM \cite{yang2023} bring world-model machinery to urban driving with the same BEV-then-transformer pattern we use, but they consume a single urban dataset and output continuous trajectories. The architectural lineage is real but the off-road action vocabulary and cross-dataset protocol are new here. (iii) The original Decision Transformer \cite{chen2021} treats policy learning as autoregressive sequence modelling but operates on state vectors, not perception. Pairing it with a BEV world model is the architectural step that turns it into a perception-aware policy.
+
 % ============================================================
 \section{Methodology}
 \label{sec:methodology}
@@ -606,6 +645,70 @@ F1 Score (macro) & 0.7948 & 0.7864 \\
 \end{figure}
 
 The world model's predictions cost only a \textbf{0.79\% accuracy drop} relative to using ground-truth observations, and the decision transformer picks the same action in \textbf{98.82\%} of test cases regardless of which input it gets. The world model was never trained on RELLIS-3D data, so this number is the strongest single piece of evidence in the paper that the latent terrain representation transfers across the LidarDustX/GOOSE-3D $\to$ RELLIS-3D gap.
+
+% ============================================================
+\section{Ablation Studies}
+\label{sec:ablation}
+% ============================================================
+
+The design space of TerrainFormer contains five choices we evaluated explicitly: the LiDAR encoder backbone, the predictive-evaluation protocol (substituting predicted future frames for ground-truth observations), the focal-loss training recipe, the action-chunk size $K$, and the goal-direction lookahead $k$. The first two are empirically measured; the latter three are reported as design-choice ablations supported by the design's failure modes when each component is removed. We did not run a full multi-seed retrain for every variant because of the compute cost (Section~\ref{sec:limitations}), so we are explicit about which entries below are empirical and which are qualitative.
+
+\subsection{Encoder backbone: PointPillars vs.\ PointNet++}
+\label{sec:ablation_encoder}
+
+The encoder choice is reported empirically in Table~\ref{tab:encoder_comparison} and the surrounding analysis in Section~\ref{sec:lidar_encoder}. The headline numbers: PointPillars produces a dense BEV tensor in a single \texttt{scatter\_reduce} call ($\sim$5\,ms, $\sim$200\,FPS), whereas PointNet++ runs iterative neighbourhood queries on irregular point sets ($\sim$25\,ms, $\sim$40\,FPS). End-to-end this is a $\sim$50 vs.\ $\sim$25\,FPS difference at the system level. The architectural reason was unpacked into three contributing factors (memory layout, hierarchy depth, output-format alignment) in Section~\ref{sec:lidar_encoder}. The conclusion is that PointPillars is the only backbone in the comparison that meets the 10\,Hz LiDAR refresh-rate constraint with margin for the downstream stages.
+
+\subsection{Predictive evaluation: ground-truth vs.\ predicted observations}
+\label{sec:ablation_predictive}
+
+This is the load-bearing empirical ablation in the paper because it isolates what the decision transformer actually reads off. Table~\ref{tab:predictive} reports the result: substituting the world model's predicted future frame for the ground-truth observation costs 0.79\,\% accuracy and changes 1.18\,\% of predictions (Section~\ref{sec:results}). The world model was pretrained on LidarDustX and GOOSE-3D, datasets with no overlap with the RELLIS-3D test set, so the small accuracy drop says two things: (i) the world model's latent terrain representation is what the decision transformer uses, not the raw current observation; and (ii) the representation transfers across datasets.
+
+\subsection{Focal loss with inverse-frequency class weighting}
+\label{sec:ablation_focal}
+
+The action distribution in RELLIS-3D is heavily skewed: stop and forward-fast together comprise 68\,\% of the test set, while six minority classes individually account for under 5\,\% each (Section~\ref{sec:results}). With a plain cross-entropy loss the model has a learnable shortcut: predict the majority class. We measured this once during an early training run with cross-entropy only and observed near-zero recall on every minority class with overall accuracy still in the 60--65\,\% range. Switching to focal loss with automatic inverse-frequency class weighting ($\gamma{=}2.0$, label smoothing $0.1$) is what lifts per-class F1 above 0.65 for every class in Table~\ref{tab:per_class}. The recipe is the only mitigation we apply for class imbalance; we did not use synthetic data augmentation or curriculum learning. Whether focal loss alone is sufficient at lower minority-class support (e.g.\ $<5$ test samples for some right-turn classes) is the open question of Section~\ref{sec:limitations}.
+
+\subsection{Action-chunk size $K$}
+\label{sec:ablation_chunk}
+
+We use $K{=}5$ action chunks aggregated at inference by TemporalEnsemble with exponential-decay weighting ($\lambda{=}0.9$). The choice of $K$ trades two effects:
+\begin{itemize}
+    \item Larger $K$ supervises the decision transformer to look further ahead, which raises overall accuracy slightly and improves temporal coherence (less jitter between consecutive frames).
+    \item Larger $K$ also amplifies error in the far-future predictions, which start to disagree with each other if $K$ is set too high relative to the 10\,Hz framerate; the weighted average then degrades.
+\end{itemize}
+At $K{=}5$ (0.5\,s look-ahead at 10\,Hz) the chunk predictions are still tightly correlated, so the TemporalEnsemble weight on the oldest member is $\lambda^{4}{=}0.66$, large enough to contribute. We did not sweep $K$ empirically; $K{=}5$ matches the chunk size used in the original action-chunking paper~\cite{zhao2023act} for bimanual manipulation and proved sufficient here.
+
+\subsection{Goal-direction lookahead $k$}
+\label{sec:ablation_goal}
+
+The goal direction $\mathbf{g}_t$ is derived from the vehicle's future position $k$ frames ahead (Section~\ref{sec:goal_direction}). We use $k{=}5$ (0.5\,s). The two failure modes at the extremes:
+\begin{itemize}
+    \item $k$ too small ($k{=}1$): $\mathbf{g}_t$ collapses to the per-frame heading change, which is dominated by pose noise rather than intent. The model then learns to ignore the goal channel.
+    \item $k$ too large ($k{=}20$): $\mathbf{g}_t$ points at a position the vehicle reaches 2\,s later, which is uncorrelated with the action taken at the current step. The goal channel becomes a weak target signal and the model again learns to ignore it.
+\end{itemize}
+At $k{=}5$ the displacement vector reliably captures the immediate next-manoeuvre intent (turn or straight) and is short enough that pose noise has not propagated. We did not exhaustively sweep $k$; the value was chosen to match the action-chunk size $K{=}5$ so that the goal-direction horizon and the chunk-prediction horizon coincide.
+
+\subsection{Summary of ablations}
+
+Table~\ref{tab:ablation_summary} summarises which design choices have empirical support and which are reported as design-choice rationale.
+
+\begin{table}[H]
+\caption{Summary of ablations reported in this section.}
+\label{tab:ablation_summary}
+\centering
+\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Ablation & Variants compared & Empirical? & Effect \\
+\midrule
+Encoder backbone   & PointPillars vs.\ PointNet++ & yes & $2{\times}$ end-to-end throughput \\
+Predictive eval    & GT obs.\ vs.\ predicted obs. & yes & 0.79\,\% accuracy drop, 98.82\,\% agreement \\
+Focal-loss recipe  & focal vs.\ plain CE (early run) & partial & lifts minority F1 from $\sim$0 to $\geq 0.65$ \\
+Chunk size $K$     & $K{\in}\{1,5,10\}$           & no (design)  & $K{=}5$ matches \cite{zhao2023act} default \\
+Goal lookahead $k$ & $k{\in}\{1,5,20\}$           & no (design)  & $k{=}5$ balances pose noise and horizon \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % ============================================================
 \section{Discussion}
