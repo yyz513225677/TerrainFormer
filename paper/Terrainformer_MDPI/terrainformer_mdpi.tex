@@ -68,7 +68,7 @@ This paper describes \textbf{TerrainFormer}, the system that results from that c
 
 \begin{itemize}
     \item A \textbf{world model} that takes raw 3D LiDAR point clouds and is pretrained self-supervised on four prediction targets at once: future BEV reconstruction, traversability, elevation, and semantic segmentation.
-    \item A \textbf{decision transformer} with action chunking~\cite{zhao2023act}. It assembles an 80-token sequence (world tokens, action history, learnable chunk queries) and predicts $K{=}5$ future actions per frame. TemporalEnsemble averages overlapping chunks at inference to remove jitter. Goal directions are computed from pose trajectories; no manual waypoint annotation is required.
+    \item A \textbf{decision transformer} with action chunking~\cite{zhao2023act}. It assembles an 80-token sequence (world tokens, action history, learnable chunk queries) and predicts $K{=}5$ future actions per frame. temporal prediction aggregation averages overlapping chunks at inference to remove jitter. Goal directions are computed from pose trajectories; no manual waypoint annotation is required.
     \item A \textbf{PointPillars encoder} small and fast enough that the full stack runs at over 30 FPS on a single GPU, well above the 10 Hz refresh rate of the OS1-64 LiDAR.
     \item A \textbf{cross-dataset training paradigm}. The world model is pretrained on LidarDustX \cite{lidardust} and GOOSE-3D \cite{goose2024}; the decision transformer is trained on RELLIS-3D. The two sets do not overlap, so the world model is evaluated on terrain it has never seen during pretraining. Test accuracy drops only 0.79\% when ground-truth observations are replaced with the world model's future-frame predictions.
     \item A \textbf{focal-loss training recipe} with automatic inverse-frequency class weights and label smoothing, the only mitigation we apply for the heavy class imbalance in RELLIS-3D action labels.
@@ -156,7 +156,7 @@ Wayformer \cite{nayakanti2023}     & continuous traj. & no   & yes \\
 \end{tabular}
 \end{table}
 
-Three rows of Tables~\ref{tab:method_arch} and~\ref{tab:method_caps} are worth picking out. (i) BADGR \cite{kahn2021} and TartanDrive \cite{triest2023} are the closest off-road comparators, both end-to-end. Neither separates terrain representation from action selection, so the perception layer cannot be evaluated independently or transferred. TerrainFormer's two-phase split is what makes the cross-dataset measurement in Section~\ref{sec:results} possible at all. (ii) MILE \cite{hu2022} and PCWM \cite{yang2023} bring world-model machinery to urban driving with the same BEV-then-transformer pattern we use, but they consume a single urban dataset and output continuous trajectories. The architectural lineage is real but the off-road action vocabulary and cross-dataset protocol are new here. (iii) The original Decision Transformer \cite{chen2021} treats policy learning as autoregressive sequence modelling but operates on state vectors, not perception. Pairing it with a BEV world model is the architectural step that turns it into a perception-aware policy.
+Three observations of Tables~\ref{tab:method_arch} and~\ref{tab:method_caps} are note worthy. (i) BADGR \cite{kahn2021} and TartanDrive \cite{triest2023} are the closest off-road comparators, both end-to-end. Neither separates terrain representation from action selection, so the perception layer cannot be evaluated independently or transferred. TerrainFormer's two-phase split is what makes the cross-dataset measurement in Section~\ref{sec:results} possible at all. (ii) MILE \cite{hu2022} and PCWM \cite{yang2023} bring world-model machinery to urban driving with the same BEV-then-transformer pattern we use, but they consume a single urban dataset and output continuous trajectories. The architectural lineage is real but the off-road action vocabulary and cross-dataset protocol are new here. (iii) The original Decision Transformer \cite{chen2021} treats policy learning as autoregressive sequence modelling but operates on state vectors, not perception. Pairing it with a BEV world model is the architectural step that turns it into a perception-aware policy.
 
 % ============================================================
 \section{Methodology}
@@ -175,7 +175,7 @@ Fig.~\ref{fig:architecture} gives the high-level dataflow at a glance: a point c
     % the figure is reduced to single-column width.
     \includegraphics[width=\linewidth]{terrainformer_flowchart.png}
     \caption{%
-        High-level dataflow of TerrainFormer. A raw LiDAR point cloud (left) passes through the PointPillars encoder to a BEV feature map, which the world model compresses to 64 latent tokens; the decision transformer attends jointly to these tokens, an action-history buffer, and a learnable chunk query, and predicts $K{=}5$ future actions. TemporalEnsemble (right) averages overlapping chunks for jitter-free outputs. \textbf{Block-internal details are deliberately omitted here} and are shown in expanded views: encoder (Fig.~\ref{fig:encoder_diagram}), world model (Fig.~\ref{fig:world_model_diagram}), and decision transformer (Fig.~\ref{fig:dt_diagram}). Symbol legend: $B$ batch, $N$ points/scan, $H{\times}W{=}256{\times}256$ BEV cells, $d{=}512$ embedding, $K{=}5$ chunk, $A{=}12$ actions.
+        High-level dataflow of TerrainFormer. A raw LiDAR point cloud (left) passes through the PointPillars encoder to a BEV feature map, which the world model compresses to 64 latent tokens; the decision transformer attends jointly to these tokens, an action-history buffer, and a learnable chunk query, and predicts $K{=}5$ future actions. temporal prediction aggregation (right) averages overlapping chunks for jitter-free outputs. \textbf{Block-internal details are deliberately omitted here} and are shown in expanded views: encoder (Fig.~\ref{fig:encoder_diagram}), world model (Fig.~\ref{fig:world_model_diagram}), and decision transformer (Fig.~\ref{fig:dt_diagram}). Symbol legend: $B$ batch, $N$ points/scan, $H{\times}W{=}256{\times}256$ BEV cells, $d{=}512$ embedding, $K{=}5$ chunk, $A{=}12$ actions.
     }
     \label{fig:architecture}
 \end{figure*}
@@ -283,7 +283,7 @@ The decision transformer predicts discrete navigation actions using a token-sequ
 \begin{figure*}[!t]
     \centering
     \includegraphics[width=\linewidth]{dt_diagram.png}
-    \caption{Component view of the decision transformer. The 80-token sequence (top) is composed of one context token $\mathbf{c}$, the 64 world latent tokens, 10 action-history tokens, and 5 learnable chunk-query tokens. Dashed red arrows from one chunk query illustrate the cross-modal attention pattern: every chunk query attends to all spatial (world) and temporal (action-history) tokens simultaneously. The context-token output predicts the current action and confidence; the last five output positions predict the action chunk $(B, K{=}5, A{=}12)$; TemporalEnsemble at inference aggregates overlapping chunks with exponential-decay weighting.}
+    \caption{Component view of the decision transformer. The 80-token sequence (top) is composed of one context token $\mathbf{c}$, the 64 world latent tokens, 10 action-history tokens, and 5 learnable chunk-query tokens. Dashed red arrows from one chunk query illustrate the cross-modal attention pattern: every chunk query attends to all spatial (world) and temporal (action-history) tokens simultaneously. The context-token output predicts the current action and confidence; the last five output positions predict the action chunk $(B, K{=}5, A{=}12)$; temporal prediction aggregation at inference aggregates overlapping chunks with exponential-decay weighting.}
     \label{fig:dt_diagram}
 \end{figure*}
 
@@ -322,7 +322,7 @@ The 80-token sequence is processed by a 4-layer transformer with $d_\text{model}
 \end{enumerate}
 
 \subsubsection{Temporal Ensembling at Inference}
-At inference, each frame produces a $K{=}5$ action chunk. Overlapping chunks from the last $K$ consecutive frames are aggregated via \emph{TemporalEnsemble}~\cite{zhao2023act} using exponential-decay weighting:
+At inference, each frame produces a $K{=}5$ action chunk. Overlapping chunks from the last $K$ consecutive frames are aggregated via \emph{temporal prediction aggregation}~\cite{zhao2023act} using exponential-decay weighting:
 \begin{equation}
     \hat{a}_t = \arg\max_a \;\frac{\displaystyle\sum_{k=0}^{K-1} \lambda^k \cdot \text{chunk}_{t-k}[k]}
                                   {\displaystyle\sum_{k=0}^{K-1} \lambda^k},
@@ -425,12 +425,12 @@ The 0.5 chunk weight balances look-ahead supervision against the primary current
 
 \subsection{Datasets}
 
-We use three publicly available off-road LiDAR datasets that play complementary roles: RELLIS-3D for action-conditioned decision training, and LidarDustX plus GOOSE-3D for self-supervised world-model pretraining on terrain types the decision transformer never sees during its own training. The three datasets are described individually below; the resulting two-phase training assignment is summarised in Section~\ref{sec:cross_dataset_paradigm}. Representative LiDAR scans from each dataset are shown in Fig.~\ref{fig:dataset_examples}.
+We use three publicly available off-road LiDAR datasets that play complementary roles: RELLIS-3D for action-conditioned decision training, and LidarDustX plus GOOSE-3D for self-supervised world-model pretraining on terrain types the decision transformer never sees during its own training. The three datasets are described individually below; the resulting two-phase training assignment is summarized in Section~\ref{sec:cross_dataset_paradigm}. Representative LiDAR scans from each dataset are shown in Fig.~\ref{fig:dataset_examples}.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{dataset_examples.png}
-    \caption{Representative LiDAR scans from each dataset, projected to BEV and coloured by height (clip range $-2.5$ m to $+4.0$ m). (a) RELLIS-3D --- vegetation-heavy off-road, Ouster OS1-64 ($\sim$37 k points/scan). (b) LidarDustX --- dusty construction environment, multi-sensor capture ($\sim$111 k points/scan with the LS128 sensor shown). (c) GOOSE-3D --- mixed European outdoor (forests, fields, campus), Velodyne VLS128 ($\sim$199 k points/scan). The red triangle marks the ego vehicle.}
+    \caption{Representative LiDAR scans from each dataset, projected to BEV and colored by height (clip range $-2.5$ m to $+4.0$ m). (a) RELLIS-3D --- vegetation-heavy off-road, Ouster OS1-64 ($\sim$37 k points/scan). (b) LidarDustX --- dusty construction environment, multi-sensor capture ($\sim$111 k points/scan with the LS128 sensor shown). (c) GOOSE-3D --- mixed European outdoor (forests, fields, campus), Velodyne VLS128 ($\sim$199 k points/scan). The red triangle marks the ego vehicle.}
     \label{fig:dataset_examples}
 \end{figure}
 
@@ -670,7 +670,7 @@ The world model's predictions cost only a \textbf{0.79\% accuracy drop} relative
 \label{sec:ablation}
 % ============================================================
 
-The design space of TerrainFormer contains five choices we evaluated explicitly: the LiDAR encoder backbone, the predictive-evaluation protocol (substituting predicted future frames for ground-truth observations), the focal-loss training recipe, the action-chunk size $K$, and the goal-direction lookahead $k$. The first two are empirically measured; the latter three are reported as design-choice ablations supported by the design's failure modes when each component is removed. We did not run a full multi-seed retrain for every variant because of the compute cost (Section~\ref{sec:limitations}), so we are explicit about which entries below are empirical and which are qualitative.
+The design space of TerrainFormer contains five choices we evaluated explicitly plus one planned decomposition: the LiDAR encoder backbone, the predictive-evaluation protocol (substituting predicted future frames for ground-truth observations), a component-wise decomposition of the predictive-degradation summary number into world-model / chunking / TemporalEnsemble / cross-dataset contributions (planned for the next revision), the focal-loss training recipe, the action-chunk size $K$, and the goal-direction lookahead $k$. The first two are empirically measured; the next-revision decomposition is described in detail in Section~\ref{sec:ablation_decomposition}; the remaining three are reported as design-choice ablations supported by the design's failure modes when each component is removed. We did not run a full multi-seed retrain for every variant because of the compute cost (Section~\ref{sec:limitations}), so we are explicit about which entries below are empirical and which are qualitative.
 
 \subsection{Encoder backbone: PointPillars vs.\ PointNet++}
 \label{sec:ablation_encoder}
@@ -682,6 +682,20 @@ The encoder choice is reported empirically in Table~\ref{tab:encoder_comparison}
 
 This is the load-bearing empirical ablation in the paper because it isolates what the decision transformer actually reads off. Table~\ref{tab:predictive} reports the result: substituting the world model's predicted future frame for the ground-truth observation costs 0.79\,\% accuracy and changes 1.18\,\% of predictions (Section~\ref{sec:results}). The world model was pretrained on LidarDustX and GOOSE-3D, datasets with no overlap with the RELLIS-3D test set, so the small accuracy drop says two things: (i) the world model's latent terrain representation is what the decision transformer uses, not the raw current observation; and (ii) the representation transfers across datasets.
 
+\subsection{Component-wise decomposition of the predictive-degradation number (planned)}
+\label{sec:ablation_decomposition}
+
+The 0.79\,\% predictive degradation reported in Section~\ref{sec:ablation_predictive} is a summary metric; it does not isolate which of the three architectural elements (the world model itself, action chunking with TemporalEnsemble, and the cross-dataset training protocol) dominates the cross-dataset generalisation result. To make this attribution explicit, the next revision of this manuscript will report four additional Phase~2 retrains, each with exactly one component removed relative to the full TerrainFormer baseline:
+
+\begin{itemize}
+    \item[\textbf{D1}] \textbf{World model off}: the decision transformer is fed the raw $64\times256\times256$ BEV feature map directly, with no ViT-based latent compression. Isolates the contribution of the world-model latent representation.
+    \item[\textbf{D2}] \textbf{Action chunking off}: $K{=}1$ (per-frame action prediction) with the same architecture otherwise. The TemporalEnsemble aggregator is disabled implicitly because there is only one chunk per frame. Isolates the contribution of action-chunk supervision.
+    \item[\textbf{D3}] \textbf{TemporalEnsemble off (chunking on)}: $K{=}5$ as in the baseline, but the per-frame output is the argmax of the current frame's chunk\,$[0]$ instead of the exponentially-decayed average across the last~$K$ frames. Isolates TemporalEnsemble's contribution separately from action chunking.
+    \item[\textbf{D4}] \textbf{Cross-dataset protocol off}: Phase~1 is repeated with RELLIS-3D included in the pretraining set (i.e., the world model is allowed to see RELLIS-3D during pretraining). Isolates the cross-dataset-evaluation portion of the predictive-degradation number from the architectural portion.
+\end{itemize}
+
+Each variant requires one full Phase~2 retrain ($\approx 2$\,h on a Quadro RTX 8000); D4 also requires repeating Phase~1 once ($\approx 13$\,h). Total compute is approximately 21~hours on a single GPU. The deliverable is a one-row-per-variant table reporting (a) the predictive-evaluation accuracy delta versus the full-model baseline (so the row sums approximately reproduce the 0.79\,\% summary number when components are added back in), and (b) the per-class macro F1 delta on the RELLIS-3D test split (so the contribution of each architectural element to minority-class recovery can also be read off). This planned table is the basis for distinguishing which architectural choices dominate cross-dataset generalisation and which contribute only marginally; it will be added to this Ablation Studies section in the next revision pass.
+
 \subsection{Focal loss with inverse-frequency class weighting}
 \label{sec:ablation_focal}
 
@@ -690,12 +704,12 @@ The action distribution in RELLIS-3D is heavily skewed: stop and forward-fast to
 \subsection{Action-chunk size $K$}
 \label{sec:ablation_chunk}
 
-We use $K{=}5$ action chunks aggregated at inference by TemporalEnsemble with exponential-decay weighting ($\lambda{=}0.9$). The choice of $K$ trades two effects:
+We use $K{=}5$ action chunks aggregated at inference by temporal prediction aggregation with exponential-decay weighting ($\lambda{=}0.9$). The choice of $K$ trades two effects:
 \begin{itemize}
     \item Larger $K$ supervises the decision transformer to look further ahead, which raises overall accuracy slightly and improves temporal coherence (less jitter between consecutive frames).
     \item Larger $K$ also amplifies error in the far-future predictions, which start to disagree with each other if $K$ is set too high relative to the 10\,Hz framerate; the weighted average then degrades.
 \end{itemize}
-At $K{=}5$ (0.5\,s look-ahead at 10\,Hz) the chunk predictions are still tightly correlated, so the TemporalEnsemble weight on the oldest member is $\lambda^{4}{=}0.66$, large enough to contribute. We did not sweep $K$ empirically; $K{=}5$ matches the chunk size used in the original action-chunking paper~\cite{zhao2023act} for bimanual manipulation and proved sufficient here.
+At $K{=}5$ (0.5\,s look-ahead at 10\,Hz) the chunk predictions are still tightly correlated, so the temporal prediction aggregation weight on the oldest member is $\lambda^{4}{=}0.66$, large enough to contribute. We did not sweep $K$ empirically; $K{=}5$ matches the chunk size used in the original action-chunking paper~\cite{zhao2023act} for bimanual manipulation and proved sufficient here.
 
 \subsection{Goal-direction lookahead $k$}
 \label{sec:ablation_goal}
@@ -722,6 +736,7 @@ Ablation & Variants compared & Empirical? & Effect \\
 \midrule
 Encoder backbone   & PointPillars vs.\ PointNet++ & yes & $2{\times}$ end-to-end throughput \\
 Predictive eval    & GT obs.\ vs.\ predicted obs. & yes & 0.79\,\% accuracy drop, 98.82\,\% agreement \\
+Component-wise decomp.\ of predictive eval & D1--D4 (Section~\ref{sec:ablation_decomposition}) & planned & per-component accuracy delta, next revision \\
 Focal-loss recipe  & focal vs.\ plain CE (early run) & partial & lifts minority F1 from $\sim$0 to $\geq 0.65$ \\
 Chunk size $K$     & $K{\in}\{1,5,10\}$           & no (design)  & $K{=}5$ matches \cite{zhao2023act} default \\
 Goal lookahead $k$ & $k{\in}\{1,5,20\}$           & no (design)  & $k{=}5$ balances pose noise and horizon \\
@@ -778,7 +793,7 @@ Incorporating LidarDustX (6 diverse LiDAR sensors) and GOOSE-3D (Velodyne VLS128
 The behavioural evaluation in this study is conducted entirely in simulation; we have not yet performed closed-loop trials on a physical vehicle.
 
 \paragraph{Simulation environment.}
-In addition to the per-frame metrics reported in Section~\ref{sec:results}, TerrainFormer was exercised inside a custom real-time simulation interface --- the same \texttt{realtime\_inference.py} environment used for development and shown in Fig.~\ref{fig:simulator_screenshot}. The simulator streams RELLIS-3D LiDAR frames into the trained model at the native 10\,Hz rate of the OS1-64 sensor and renders, side by side: the bird's-eye-view point cloud (height-coloured) with the ego vehicle marker, the predicted traversability map produced by the world model, the decision-transformer action card (predicted action name, confidence bar, ground-truth match indicator), and a horizontal bar chart of the per-action probability vector. The interface publishes each decision over UDP at the same frequency, exactly mirroring the deployment-ready interface described in Section~\ref{sec:realtime_integration}. This setup allowed us to verify qualitatively, on every test sequence, that the action stream is temporally coherent, that confidence drops appropriately on out-of-distribution observations, and that the predicted traversability mask aligns with visible obstacles.
+In addition to the per-frame metrics reported in Section~\ref{sec:results}, TerrainFormer was exercised inside a custom real-time simulation interface --- the same \texttt{realtime\_inference.py} environment used for development and shown in Fig.~\ref{fig:simulator_screenshot}. The simulator streams RELLIS-3D LiDAR frames into the trained model at the native 10\,Hz rate of the OS1-64 sensor and renders, side by side: the bird's-eye-view point cloud (height-colored) with the ego vehicle marker, the predicted traversability map produced by the world model, the decision-transformer action card (predicted action name, confidence bar, ground-truth match indicator), and a horizontal bar chart of the per-action probability vector. The interface publishes each decision over UDP at the same frequency, exactly mirroring the deployment-ready interface described in Section~\ref{sec:realtime_integration}. This setup allowed us to verify qualitatively, on every test sequence, that the action stream is temporally coherent, that confidence drops appropriately on out-of-distribution observations, and that the predicted traversability mask aligns with visible obstacles.
 
 \begin{figure}[H]
     \centering
@@ -795,14 +810,15 @@ Although the simulator runs at full sensor rate and gives a faithful view of the
     \item \emph{Discrete forward-only action space}: TerrainFormer outputs one of 12 discrete actions and cannot reverse. This matches the RELLIS-3D action distribution but precludes recovery manoeuvres and fine-grained continuous control.
     \item \emph{Single-platform training}: behavioural cloning was performed on a single robot (Warthog with OS1-64). Transfer to other platforms (e.g., differential-drive UGVs with different LiDAR geometries) is not evaluated.
     \item \emph{Rare-class variance}: the rarest action (R\,sharp, 4 test samples) has a high-variance F1 estimate; conclusions about minority-class learning should be interpreted accordingly.
-    \item \emph{Single training run}: results are reported from a single training run for each phase (seed 42), not from a multi-seed ensemble. Phase 1 pretraining alone takes 13~hours on a Quadro RTX 8000, so a full multi-seed study is left to future work; in lieu of statistical replicates we have at least verified that the reported test metrics are reproducible from the released checkpoint using the published evaluation script.
+    \item \emph{Single training run}: Results are reported from a single training run for each phase using seed 42, rather than from repeated independent runs under different random seeds. Phase 1 pretraining alone requires approximately 13 hours on a Quadro RTX 8000; therefore, a full statistical replicate study is left to future work. In lieu of repeated training runs, we verified that the reported test metrics are reproducible from the released checkpoint using the published evaluation script.
+.
     \item \emph{No baseline comparison}: due to the absence of a directly-comparable prior system on RELLIS-3D action prediction, the numbers in Table~\ref{tab:overall_results} cannot yet be contextualised against published baselines. We list this as future work.
 \end{itemize}
 
 \subsection{Real-Time Inference and External Integration}
 \label{sec:realtime_integration}
 
-With the PointPillars encoder, TerrainFormer achieves real-time inference suitable for 10\,Hz LiDAR sensors. We characterise real-time performance along four dimensions: per-component latency, end-to-end throughput, latency stability (jitter), and host-resource utilisation.
+With the PointPillars encoder, TerrainFormer achieves real-time inference suitable for 10\,Hz LiDAR sensors. We characterize real-time performance along four dimensions: per-component latency, end-to-end throughput, latency stability (jitter), and host-resource utilization.
 
 \paragraph{Per-component latency.}
 Table~\ref{tab:latency} reports the mean per-component latency on a single Quadro RTX 8000 GPU under FP16 inference. Each value is the mean over 1{,}000 inference passes after 100 warm-up passes; the standard deviation across passes was below 0.4\,ms for every component, indicating very low jitter. The PointPillars encoder dominates the variability budget because pillarisation runtime depends on the number of occupied cells, which fluctuates with terrain geometry; the world model and decision transformer are essentially constant-time at fixed input shape.
