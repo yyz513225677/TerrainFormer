@@ -107,7 +107,7 @@ The four lines of work surveyed above are not independent; in practice they form
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{tech_tree.pdf}
+    \includegraphics[width=\linewidth]{tech_tree.png}
     \caption{Taxonomy of related work on off-road autonomous navigation. The four solid-line branches are classical geometric approaches, deep-learning perception (semantic segmentation and traversability), end-to-end imitation learning, and the more recent world-model-plus-sequence-policy family. TerrainFormer sits at the leaf of the last branch. Dashed red arrows mark the prior components TerrainFormer reuses: BEV world models from urban driving \cite{hu2022, yang2023}, decision-transformer architectures from offline RL \cite{chen2021, zheng2022, janner2021}, and self-supervised traversability/segmentation targets from deep-learning perception \cite{wellhausen2019, frey2023, castro2023}.}
     \label{fig:tech_tree}
 \end{figure}
@@ -168,7 +168,7 @@ The LiDAR encoder processes raw 3D point clouds of up to $N = 65{,}536$ points, 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{encoder_diagram.pdf}
+    \includegraphics[width=\linewidth]{encoder_diagram.png}
     \caption{Component view of the PointPillars LiDAR encoder used by TerrainFormer. The pipeline is read left-to-right (top row) then folded back right-to-left (bottom row). Critically, the per-point MLP operates independently on every point and is \emph{not} pooled itself; max-pooling is applied to the MLP \emph{outputs} within each pillar (Section~\ref{sec:lidar_encoder}). Tensor shapes are annotated below each block.}
     \label{fig:encoder_diagram}
 \end{figure}
@@ -232,7 +232,7 @@ The world model learns to predict terrain dynamics and extract rich representati
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{world_model_diagram.pdf}
+    \includegraphics[width=\linewidth]{world_model_diagram.png}
     \caption{Component view of the world model. The three internal modules (terrain tokenizer, dynamics transformer, latent compression) and the four self-supervised heads used during Phase 1 pretraining are shown explicitly. Only $\mathbf{Z}$ (64 latent tokens) and $\mathbf{z}_\text{global}$ are passed on to the decision transformer in Phase 2; the four prediction heads remain unused at inference and after Phase 1 the entire world model is frozen.}
     \label{fig:world_model_diagram}
 \end{figure}
@@ -263,7 +263,7 @@ The decision transformer predicts discrete navigation actions using a token-sequ
 
 \begin{figure*}[!t]
     \centering
-    \includegraphics[width=\linewidth]{dt_diagram.pdf}
+    \includegraphics[width=\linewidth]{dt_diagram.png}
     \caption{Component view of the decision transformer. The 80-token sequence (top) is composed of one context token $\mathbf{c}$, the 64 world latent tokens, 10 action-history tokens, and 5 learnable chunk-query tokens. Dashed red arrows from one chunk query illustrate the cross-modal attention pattern: every chunk query attends to all spatial (world) and temporal (action-history) tokens simultaneously. The context-token output predicts the current action and confidence; the last five output positions predict the action chunk $(B, K{=}5, A{=}12)$; TemporalEnsemble at inference aggregates overlapping chunks with exponential-decay weighting.}
     \label{fig:dt_diagram}
 \end{figure*}
